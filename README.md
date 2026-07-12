@@ -1,12 +1,38 @@
 # Skill Templates & Toolkits
 
+<p align="left">
+  <img src="https://img.shields.io/badge/Claude_Code-5.0+-purple" alt="Claude Code">
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
+  <img src="https://img.shields.io/badge/status-maintained-brightgreen" alt="Status">
+</p>
+
 可复用到其他 Claude Code 项目的技能（Skills）、规则（Rules）和模板（Templates）集合。
+
+> 此项目最初是**考研（研究生入学考试）Claude Code 技能集合**（含路由器架构 v4.0.0、数学/英语/电子技术等 17+ 个技能），于 2026 年重构为通用的技能模板与工具集仓库。
+
+---
+
+**快速开始**
+
+```bash
+# 克隆到本地
+git clone git@github.com:Treasoni/template_ai.git
+
+# 查看所有可用模板
+ls -d templates/*/
+
+# 安装自学习模板到目标项目
+python templates/self-learning/install.py --target /path/to/your/project
+
+# 同步技能注册表
+python sync-skill-registry/scripts/sync_skill_registry.py --dry-run
+```
 
 ## 理念
 
-每个 Claude Code 项目都需要一些基础能力：管理技能注册表、记录经验教训、优化提示缓存…… 这些能力与具体业务无关，可以独立抽取、复用。
+每个 Claude Code 项目都需要一些基础能力：管理技能注册表、记录经验教训、优化提示缓存……这些能力与具体业务无关，可以独立抽取、复用。
 
-本项目就是这些通用组件的**源仓库** —— 当你开启一个新项目时，可以把这里的东西拷贝过去，而不是从零开始。
+本项目就是这些通用组件的**源仓库**——当你开启一个新项目时，可以把这里的东西拷贝过去，而不是从零开始。
 
 ## 目录结构
 
@@ -92,8 +118,3 @@ python templates/self-learning/install.py --target <你的项目路径>
 - 所有技能使用统一的 frontmatter 格式（name、description、category）
 - 技能脚本放在对应目录的 `scripts/` 下
 - 模板包需要附带安装脚本或清晰的 README 说明
-
-## 历史
-
-此项目最初是**考研（研究生入学考试）Claude Code 技能集合**（含路由器架构 v4.0.0、数学/英语/电子技术等 17+ 个技能），于 2026 年重构为通用的技能模板与工具集仓库。
-# template_ai
