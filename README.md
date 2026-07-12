@@ -42,6 +42,16 @@ python sync-skill-registry/scripts/sync_skill_registry.py --dry-run
 │   ├── SKILL.md                # 技能定义
 │   └── scripts/
 │       └── sync_skill_registry.py
+├── workflow-todo-state/        # Workflow Todo State 状态机
+│   ├── SKILL.md                # 技能定义
+│   ├── agents/
+│   │   └── openai.yaml
+│   ├── references/
+│   │   ├── basic-todo-template.md
+│   │   └── integration.md
+│   └── scripts/
+│       ├── install.sh
+│       └── todo-state.sh
 ├── templates/                  # 可移植模板包
 │   ├── cache/                  #   提示缓存优化模板
 │   │   ├── README.md
@@ -79,6 +89,21 @@ python sync-skill-registry/scripts/sync_skill_registry.py --dry-run
 - 支持 `--dry-run` 预览模式
 
 **使用方式**：将此目录和脚本复制到目标项目中，注册为 Claude Code 技能即可。
+
+### `workflow-todo-state/` — Workflow 状态机
+
+为多步骤 Agent 工作流提供可恢复的进度追踪。基于人类可读的 Markdown 清单 + YAML frontmatter + 确定性状态脚本。
+
+- 将 `todo.md` 中的状态抽象为 **⬜ 未开始 / 🔲 进行中 / ✅ 已完成 / ⏭️ 跳过 / 🚫 阻塞** 五种状态
+- `todo-state.sh` 脚本提供 `start`、`complete`、`skip`、`block` 等原子操作，自动校验前驱阶段
+- 支持 phase gate：启动某个阶段前自动检查前置阶段是否已完成
+- `block` 状态记录阻塞原因，`skip` 追加跳过原因到异常记录表
+
+**安装方式**：
+
+```bash
+.claude/skills/workflow-todo-state/scripts/install.sh /path/to/target-project --with-skill --update-agents
+```
 
 ### `templates/cache/` — 提示缓存优化模板
 
