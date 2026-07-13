@@ -1,46 +1,107 @@
 ---
 name: workflow-todo-state
-description: Create or retrofit reusable todo.md workflow state machines for multi-step agent projects. Use when a project needs recoverable progress tracking, phase gates, restart-safe agent workflows, explicit skipped/blocked states, or reusable todo templates across repositories.
+description: Create or retrofit reusable named workflow state machines for multi-step agent projects. Use when a project needs recoverable workflow state files, multiple workflow definitions, phase gates, restart-safe agent workflows, explicit skipped/blocked states, workflow routing rules, or reusable workflow templates across repositories.
 ---
 
 # Workflow Todo State
 
-Use this skill to make long-running agent workflows recoverable from a project-local `todo.md`. The pattern combines human-readable Markdown checklists with machine-readable YAML frontmatter and a deterministic state script.
+Use this skill to make long-running agent workflows recoverable from named workflow state files. The pattern combines human-readable Markdown checklists with machine-readable YAML frontmatter and a deterministic state script.
 
 ## Quick Start
 
 Install into another project:
 
 ```bash
-.claude/skills/workflow-todo-state/scripts/install.sh /path/to/target-project --with-skill --update-agents
+.claude/skills/workflow-todo-state/scripts/install.sh /path/to/target-project --with-skill --init-layout --update-agents
 ```
 
 Then:
 
-1. Create or update the workflow `todo.md` from `references/basic-todo-template.md`.
-2. Ensure every phase has exactly one status line:
+1. Create workflow definitions under `.claude/workflows/{workflow-id}/`.
+2. Add `routing.yaml` to every workflow directory as the source of truth for its trigger conditions and state file pattern.
+3. Generate the routing registry with `.claude/scripts/sync-workflow-routing.sh`.
+4. Create run state files under `workspace/workflow-runs/{task-or-feature}.workflow.md`.
+5. Create or update the state file from `references/basic-state-template.md`.
+6. Ensure every phase has exactly one status line:
    ```markdown
    > [P0] ⬜ 未开始
    ```
-3. Make every workflow skill or agent read `todo.md` before starting work.
-4. Update state only through the script:
+7. Make every workflow skill or agent route the task, then read the relevant workflow state file before starting work.
+8. Update state only through the script:
    ```bash
-   .claude/scripts/todo-state.sh "${PROJECT_DIR}/todo.md" start P1
-   .claude/scripts/todo-state.sh "${PROJECT_DIR}/todo.md" complete P1
-   .claude/scripts/todo-state.sh "${PROJECT_DIR}/todo.md" skip P2 "not needed"
-   .claude/scripts/todo-state.sh "${PROJECT_DIR}/todo.md" block P3 "waiting for user input"
+   .claude/scripts/todo-state.sh "${WORKFLOW_STATE_FILE}" start P1
+   .claude/scripts/todo-state.sh "${WORKFLOW_STATE_FILE}" complete P1
+   .claude/scripts/todo-state.sh "${WORKFLOW_STATE_FILE}" skip P2 "not needed"
+   .claude/scripts/todo-state.sh "${WORKFLOW_STATE_FILE}" block P3 "waiting for user input"
    ```
 
-## Required Todo Shape
+## Recommended Layout
 
-Each reusable workflow todo should contain:
+Use separate files for workflow definitions and workflow runs:
 
-- YAML frontmatter with `workflow`, `topic`, `project_slug`, `created_at`, `last_updated`, `current_phase`, `current_status`, `mode`, and `blocked_reason`.
+```text
+.claude/
+  workflows/
+    feature-development/
+      workflow.md
+      state-template.md
+      routing.yaml
+    release-check/
+      workflow.md
+      state-template.md
+      routing.yaml
+  rules/
+    workflow-routing.md
+  scripts/
+    sync-workflow-routing.sh
+workspace/
+  workflow-runs/
+    payment-refactor.workflow.md
+    release-v1-2.workflow.md
+```
+
+Do not name every run `todo.md` when a project can have multiple workflows. Prefer descriptive state files:
+
+- `{feature-name}.workflow.md`
+- `{task-name}.workflow.md`
+- `{workflow-id}-{run-id}.workflow.md`
+
+Use `todo.md` only for a single-purpose project where one workflow will ever exist.
+
+## Required State File Shape
+
+Each reusable workflow state file should contain:
+
+- YAML frontmatter with `workflow_id`, `workflow_name`, `workflow_version`, `state_file_type`, `run_id`, `task`, `created_from`, `current_phase`, `current_status`, `mode`, and `blocked_reason`.
 - A visible line beginning with `> 当前阶段：`.
 - One unique phase status line per phase, using `> [PN] ...`.
 - An `## 异常记录` table if `skip` or `block` should append history.
 
-See `references/basic-todo-template.md` for a minimal portable template and `references/integration.md` for retrofit instructions.
+See `references/basic-state-template.md` for a minimal portable state template, `references/workflow-routing-template.md` for routing rules, and `references/integration.md` for retrofit instructions.
+
+## Routing Metadata and Synchronization
+
+Each workflow directory must contain a minimal scalar `routing.yaml`:
+
+```yaml
+workflow_id: feature-development
+required: true
+when_to_use: "Implementing or changing a product feature"
+triggers: "new feature; bug fix; refactor"
+excludes: "read-only question; inspect-only request"
+state_file_pattern: "workspace/workflow-runs/feature-{task}.workflow.md"
+```
+
+`workflow_id` must match its directory name. Keep values on one line and do not use `|`, because they are rendered into a Markdown table.
+
+After every workflow create, change, rename, or deletion, run:
+
+```bash
+.claude/scripts/sync-workflow-routing.sh
+.claude/scripts/sync-workflow-routing.sh --check
+```
+
+The first command regenerates only the marked block in `.claude/rules/workflow-routing.md`; the second is suitable for pre-commit or CI and fails when the registry is stale.
 
 ## State Rules
 
@@ -55,9 +116,12 @@ See `references/basic-todo-template.md` for a minimal portable template and `ref
 Keep the change small:
 
 1. Add the script.
-2. Add frontmatter and unique phase lines to existing `todo.md` templates.
-3. Replace ad hoc `sed` or manual status edits in skills/agents with `todo-state.sh`.
-4. Add one rule to the project entry instructions: every phase must read `todo.md` before acting.
-5. Test one happy path and one blocked/invalid transition.
+2. Add `.claude/workflows/`, `workspace/workflow-runs/`, and `.claude/rules/workflow-routing.md`.
+3. Add `routing.yaml` to every existing workflow, then run `sync-workflow-routing.sh`.
+4. Add frontmatter and unique phase lines to existing state files.
+5. Replace ad hoc `sed` or manual status edits in skills/agents with `todo-state.sh`.
+6. Add a project entry rule: before any mutating action, route the task; if a required workflow matches, create or resume its run and start the current phase.
+7. Run `sync-workflow-routing.sh --check` in pre-commit or CI.
+8. Test one happy path, one blocked/invalid transition, and one stale-routing failure.
 
 Do not force a project to adopt this exact workflow structure. Preserve local phase names, output files, and user confirmation gates.
