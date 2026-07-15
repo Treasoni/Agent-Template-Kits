@@ -11,13 +11,14 @@
 
 3. **记录要短，规则要可执行**：学习记录写事实和根因；`RULES.md` 写简洁规则，例如“用 X 而非 Y”。不要把 `.learnings/` 变成冗长日志库。
 
-4. **Hook 自动读取**：Codex 通过 `.codex/hooks/read-learnings.sh`，Claude Code 通过 `.claude/hooks/read-learnings.sh` 在会话开始时注入经验库提醒。若 hook 配置不存在，先安装或合并模板中的 hook 配置。
+4. **Hook 自动读取**：各 agent profile 通过自己的 hooks 目录运行 `read_learnings.py` 或 `read-learnings.sh`，在会话开始时注入经验库提醒。若 hook 配置不存在，先安装或合并模板中的 hook 配置。
 
 ## 多 Agent 同步规则
 
-- Codex skill 默认放在 `.agents/skills/`。
-- Claude Code skill 默认放在 `.claude/skills/`。
-- 新增或更新任何共享 skill 后，必须确认两边都保留同等功能：
+- 内置 Codex profile 默认使用 `.agents/skills/`。
+- 内置 Claude Code profile 默认使用 `.claude/skills/`。
+- 通用 profile 默认使用 `.agent/skills/`；其他 agent 可使用项目自定义 skills 目录。
+- 新增或更新任何共享 skill 后，必须确认相关 profile 都保留同等功能：
 
 ```bash
 python3 .agents/skills/maintain-learnings/scripts/sync_platform_skills.py --root . --skill <skill>
@@ -26,7 +27,8 @@ python3 .agents/skills/maintain-learnings/scripts/sync_platform_skills.py --root
 - 如果报告另一侧缺失，先补齐另一侧再结束任务。
 - Codex UI 元数据（如 `agents/openai.yaml`）只留在 `.agents/`。
 - Claude Code 专属 hook / settings 只留在 `.claude/`。
-- 同步前必须比对两边差异，保留平台专属命令、Hook、工具说明和平台限制。
+- 其他 agent 的入口文件、Hook、工具权限和平台限制只留在各自 profile 中。
+- 同步前必须比对差异，保留平台专属命令、Hook、工具说明和平台限制。
 
 ## 推荐触发语
 
@@ -34,4 +36,4 @@ python3 .agents/skills/maintain-learnings/scripts/sync_platform_skills.py --root
 - “把这次错误写进 learnings”
 - “learnings 太多了，帮我维护”
 - “这个错误又犯了，去修源头”
-- “同步 Codex 和 Claude Code 的技能”
+- “同步多 agent 的技能”

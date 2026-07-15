@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '{{PROJECT_ROOT}}/.codex/hooks/read-learnings.sh'"
+            "command": "{{PYTHON}} '{{HOOK_SCRIPT}}'"
           }
         ]
       }

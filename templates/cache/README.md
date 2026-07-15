@@ -1,12 +1,12 @@
 # Prompt Cache Templates
 
-这组文件可直接复用到任何同时使用 Codex、Claude Code 或两者的项目中。
+这组文件可直接复用到任意 agent 项目中。Codex 与 Claude Code 是内置 profile；其他 agent 可以通过 `--agent` 指定自己的目录和入口文件。
 
 | 文件 | 用途 |
 | --- | --- |
 | `prompt-cache-bootstrap.sh` | 自动安装规则、更新入口文件，并检查常见缓存破坏项 |
 | `prompt-cache-rules.md` | 可复制到 `rules/prompt-cache.md` 的完整规则 |
-| `AGENTS-cache-snippet.md` | 可粘贴到 `AGENTS.md` 的精简入口规则 |
+| `AGENTS-cache-snippet.md` | 可粘贴到入口规则文件的精简规则 |
 | `prompt-cache-playbook.md` | 设计原理、反例、指标与落地检查清单 |
 
 ## Quick Start
@@ -14,22 +14,35 @@
 先检查目标项目，不会写入文件：
 
 ```bash
-bash templates/prompt-cache-bootstrap.sh --check --platform both --target /path/to/project
+bash templates/cache/prompt-cache-bootstrap.sh --check --platform both --target /path/to/project
 ```
 
-确认后安装 Codex 和 Claude Code 两套规则：
+安装 Codex 和 Claude Code 两套内置规则：
 
 ```bash
-bash templates/prompt-cache-bootstrap.sh --apply --platform both --target /path/to/project
+bash templates/cache/prompt-cache-bootstrap.sh --apply --platform both --target /path/to/project
 ```
 
-只配置一个平台时，将 `--platform both` 换成 `codex` 或 `claude`。
+安装通用 agent profile：
+
+```bash
+bash templates/cache/prompt-cache-bootstrap.sh --apply --platform none --agent generic,.agent,AGENTS.md --target /path/to/project
+```
+
+安装自定义 agent profile：
+
+```bash
+bash templates/cache/prompt-cache-bootstrap.sh --apply --platform none --agent myagent,.my-agent,INSTRUCTIONS.md --target /path/to/project
+```
+
+`--agent` 格式为 `name,agent_dir,entry_file[,rule_path]`。如果不传 `rule_path`，默认写入 `agent_dir/rules/common/prompt-cache.md`。
 
 ## What The Script Changes
 
-- Codex：创建 `.codex/rules/common/prompt-cache.md`，并向 `AGENTS.md` 追加带标记的入口规则。
-- Claude Code：创建 `.claude/rules/common/prompt-cache.md`，并向 `CLAUDE.md` 追加带标记的入口规则。
-- 检查 `prompts/`、`.codex/prompts/`、`.claude/prompts/` 中可能放错位置的时间戳、UUID、git 状态等动态字段。
+- Codex profile：创建 `.codex/rules/common/prompt-cache.md`，并向 `AGENTS.md` 追加带标记的入口规则。
+- Claude profile：创建 `.claude/rules/common/prompt-cache.md`，并向 `CLAUDE.md` 追加带标记的入口规则。
+- Custom profile：创建 `<agent_dir>/rules/common/prompt-cache.md`，并向 `<entry_file>` 追加带标记的入口规则。
+- 检查 `prompts/` 和所选 profile 的 `prompts/` 目录中可能放错位置的时间戳、UUID、git 状态等动态字段。
 
 脚本不会改写现有业务提示词，也不会覆盖已存在的规则文件。重复执行是安全的：它会保留现有规则，并识别已插入的入口块。
 

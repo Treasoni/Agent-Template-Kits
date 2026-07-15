@@ -1,209 +1,122 @@
-# Skill Templates & Toolkits
+# Agent Template Kits
 
 <p align="left">
-  <img src="https://img.shields.io/badge/Claude_Code-5.0+-purple" alt="Claude Code">
+  <img src="https://img.shields.io/badge/agents-portable-blue" alt="Agent portable">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
   <img src="https://img.shields.io/badge/status-maintained-brightgreen" alt="Status">
 </p>
 
-可复用到其他 Claude Code 项目的技能（Skills）、规则（Rules）和模板（Templates）集合。
+可复用到多个 AI agent、多个项目、多个操作系统的模板集合：skills、rules、hooks、workflow state、提示缓存规范和安全审计工具。
 
-> 此项目最初是**考研（研究生入学考试）Claude Code 技能集合**（含路由器架构 v4.0.0、数学/英语/电子技术等 17+ 个技能），于 2026 年重构为通用的技能模板与工具集仓库。
+> 此项目最初是 Claude Code 技能集合，后来重构为通用 agent template source repository。Codex 与 Claude Code 仍是一等内置 profile，但不再是边界。
 
----
-
-**快速开始**
+## 快速开始
 
 ```bash
-# 克隆到本地
-git clone git@github.com:Treasoni/template_ai.git
+# 安装自学习模板到通用 agent profile
+python3 templates/self-learning/install.py --target /path/to/project --profile generic
 
-# 查看所有可用组件
-ls -d */
+# 安装到自定义 agent 目录
+python3 templates/self-learning/install.py --target /path/to/project --custom-agent myagent:.my-agent/skills:.my-agent/hooks
 
-# 安装自学习模板到目标项目
-python templates/self-learning/install.py --target /path/to/your/project
+# 安装提示缓存规则到通用 agent profile
+bash templates/cache/prompt-cache-bootstrap.sh --apply --platform none --agent generic,.agent,AGENTS.md --target /path/to/project
 
-# 安装提示缓存规则（检查模式，不会写入）
-bash templates/cache/prompt-cache-bootstrap.sh --check --platform both --target /path/to/project
+# 安装环境变量规则到 Codex profile
+python3 templates/env/install.py --target /path/to/project --profile codex
 
-# 安装 workflow 状态机
-.claude/skills/workflow-todo-state/scripts/install.sh /path/to/target-project --with-skill --init-layout
+# 安装 workflow 状态机到通用 agent profile
+bash skills/workflow-todo-state/scripts/install.sh /path/to/project --agent-dir .agent --with-skill --init-layout --update-agents
 
-# 同步技能注册表（预览模式）
-python sync-skill-registry/scripts/sync_skill_registry.py --dry-run
+# 同步技能注册表
+python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --profile generic --root /path/to/project --create --dry-run
 ```
 
-## 理念
-
-每个 Claude Code 项目都需要一些基础能力：管理技能注册表、记录经验教训、优化提示缓存……这些能力与具体业务无关，可以独立抽取、复用。
-
-本项目就是这些通用组件的**源仓库**——当你开启一个新项目时，可以把这里的东西拷贝过去，而不是从零开始。
-
-## 目录结构
-
-```
-.
-├── prompt-cache-optimizer/     # 提示缓存优化技能
-│   ├── SKILL.md                # 技能定义
-│   ├── agents/
-│   │   └── openai.yaml
-│   ├── assets/
-│   │   ├── llm-usage-event.schema.json
-│   │   └── prompt-cache-regression-cases.json
-│   ├── references/
-│   │   └── measurement.md
-│   └── scripts/
-│       └── prompt-cache-bootstrap.sh
-├── security-secret-audit/      # 密钥泄露审计工具
-│   ├── SKILL.md                # 技能定义
-│   ├── agents/
-│   │   └── openai.yaml
-│   └── scripts/
-│       ├── audit-secrets.sh
-│       └── detect-secrets.pl
-├── sync-skill-registry/        # 技能注册表同步工具
-│   ├── SKILL.md                # 技能定义
-│   └── scripts/
-│       └── sync_skill_registry.py
-├── workflow-todo-state/        # Workflow 状态机（多工作流版）
-│   ├── SKILL.md                # 技能定义
-│   ├── AGENTS_s.MD             # Agents 入口片段
-│   ├── agents/
-│   │   └── openai.yaml
-│   ├── references/
-│   │   ├── basic-state-template.md        # 状态文件模板（替代旧 todo.md）
-│   │   ├── workflow-routing-template.md   # 工作流路由定义模板
-│   │   └── integration.md                 # 集成指南
-│   └── scripts/
-│       ├── install.sh
-│       └── todo-state.sh
-├── templates/                  # 可移植模板包
-│   ├── cache/                  #   提示缓存优化模板
-│   │   ├── README.md
-│   │   ├── prompt-cache-bootstrap.sh  #   一键安装 & 审计脚本
-│   │   ├── prompt-cache-rules.md
-│   │   ├── prompt-cache-playbook.md
-│   │   └── AGENTS-cache-snippet.md
-│   └── self-learning/          #   自学习技能模板包
-│       ├── README.md
-│       ├── install.py          #   一键安装脚本
-│       ├── hooks/
-│       │   ├── claude-settings.json.template
-│       │   ├── codex-hooks.json.template
-│       │   └── read-learnings.sh
-│       ├── learnings/          #   学习记录模板（空，用于初始化）
-│       │   ├── ERRORS.md
-│       │   ├── LEARNINGS.md
-│       │   └── RULES.md
-│       └── skills/
-│           ├── digest/         #     会话总结技能
-│           └── maintain-learnings/  # 学习记录维护技能
-├── .claude/
-│   └── settings.json           # Claude Code 配置（权限等）
-├── .gitignore
-└── README.md
-```
-
-## 组件说明
-
-### `sync-skill-registry/` — 技能注册表同步
-
-自动管理 `.claude/rules/common/skill-invocation.md` 中的技能表格。
-
-- 扫描 `.claude/skills/*/SKILL.md` 中的 frontmatter（name、description、category）
-- 自动增删改技能条目，保持注册表与真实技能文件一致
-- 支持 `--dry-run` 预览模式
-
-**使用方式**：将此目录和脚本复制到目标项目中，注册为 Claude Code 技能即可。
-
-### `workflow-todo-state/` — Workflow 状态机（多工作流版）
-
-为多步骤 Agent 工作流提供可恢复的进度追踪。**v2 升级**：从单一 `todo.md` 演进为**命名工作流 + 运行实例分离**架构。
-
-- **工作流定义**：每个工作流在 `.claude/workflows/{workflow-id}/` 下独立管理，含 `workflow.md`、`state-template.md`、`routing.yaml`
-- **运行实例**：状态文件存放在 `workspace/workflow-runs/{task}.workflow.md`，按任务命名，而非笼统的 `todo.md`
-- **路由注册表**：`sync-workflow-routing.sh` 扫描所有 `routing.yaml` 生成路由表，支持 `--check` 校验模式
-- **状态脚本**：`todo-state.sh` 提供 `start / complete / skip / block` 原子操作，支持 phase gate 校验
-- **五种状态**：⬜ 未开始 / 🔲 进行中 / ✅ 已完成 / ⏭️ 跳过 / 🚫 阻塞
-
-**安装方式**：
+历史默认仍可用：
 
 ```bash
-.claude/skills/workflow-todo-state/scripts/install.sh /path/to/target-project --with-skill --init-layout --update-agents
-```
-
-### `prompt-cache-optimizer/` — 提示缓存优化技能
-
-以项目真实的提示构造、调用日志和回归样本为依据，审计并优化 LLM 提示缓存命中率。
-
-- **`prompt-cache-bootstrap.sh`**：安装或检查规则、调用事件 schema 和回归样本
-- **`references/measurement.md`**：指标接入与对比方法
-- **`assets/llm-usage-event.schema.json`**：调用日志字段合同
-- **`assets/prompt-cache-regression-cases.json`**：脱敏、稳定的回归样本
-
-**工作流**：确定范围 → 安装检查 → 采集基线 → 分析优化 → 回归验证。不将缩短提示词或删除必要上下文误当成优化。
-
-### `security-secret-audit/` — 密钥泄露审计工具
-
-在提交前或怀疑凭据泄露时扫描 Git 仓库中的 API Key、Token、密码、私钥等敏感信息，**不输出凭证原文**。
-
-- **`--staged`**：仅扫描已暂存的内容，适合提交前检查
-- **`--history`**：扫描 Git 历史中所有文件版本，用于泄露溯源
-- **`audit-secrets.sh`**：调用 `detect-secrets.pl` 执行扫描，分级报告结果
-
-**安全规则**：发现结果按文件、行号、规则名报告，绝不泄露凭证值。清除后需重新扫描确认。
-
-### `templates/cache/` — 提示缓存优化模板
-
-帮助你在 Claude Code 项目中最大化提示缓存命中率的规则、手册和自动化工具。
-
-| 文件 | 用途 |
-| --- | --- |
-| **`prompt-cache-bootstrap.sh`** | 一键安装规则、更新入口文件、扫描常见缓存破坏项 |
-| **`prompt-cache-rules.md`** | 完整规则集，包括固定前缀、延迟加载、标准提示模板结构等 |
-| **`prompt-cache-playbook.md`** | 实施手册，包含反例、推荐目录布局和上线检查清单 |
-| **`AGENTS-cache-snippet.md`** | 可粘贴到 AGENTS.md 的精简入口规则 |
-
-**快速安装**：
-
-```bash
-# 先检查目标项目（不会写文件）
-bash templates/cache/prompt-cache-bootstrap.sh --check --platform both --target /path/to/project
-
-# 确认后安装
+python3 templates/self-learning/install.py --target /path/to/project
 bash templates/cache/prompt-cache-bootstrap.sh --apply --platform both --target /path/to/project
 ```
 
-支持 Codex、Claude Code 或双平台。脚本幂等，重复执行安全。
+## 核心理念
 
-### `templates/self-learning/` — 自学习技能模板包
+很多 agent 项目都需要同一组基础能力：管理技能注册表、记录经验教训、优化提示缓存、维护可恢复 workflow、审计密钥泄露。这些能力不应该被某个 agent 名称或某个操作系统绑定。
 
-一套完整的"让 Claude 从对话中学习"的模板，提供两个技能：
+本仓库把可复用内容分成两层：
 
-| 技能 | 功能 |
-|------|------|
-| **digest** | 每次会话结束后回顾，将真实的学习点和错误记录到 `.learnings/` |
-| **maintain-learnings** | 审计学习记录、去重、追溯根源并修复，同步 Claude Code 和 Codex 双平台 |
+- **模板包**：具体能力，例如 `self-learning`、`prompt-cache`、`workflow-todo-state`。
+- **Agent profile**：目标 agent 的目录布局和入口文件，例如 `.agents/skills + AGENTS.md`、`.claude/skills + CLAUDE.md`、`.agent/skills + AGENTS.md`。
 
-**安装方式**：
+## 内置 Profiles
 
-```bash
-python templates/self-learning/install.py --target <你的项目路径>
+| Profile | Skills | Rules / Config | Hooks | Entry |
+| --- | --- | --- | --- | --- |
+| `codex` | `.agents/skills` | `.codex/rules` | `.codex/hooks` | `AGENTS.md` |
+| `claude` | `.claude/skills` | `.claude/rules` | `.claude/hooks` | `CLAUDE.md` |
+| `generic` | `.agent/skills` | `.agent/rules` | `.agent/hooks` | `AGENTS.md` |
+
+Python 安装器直接读取 `profiles/*.yaml`。其他 agent 可通过 `--profile-file` 接入可复用布局，也可使用 `--custom-agent name:skills_dir:hooks_dir` 或 `--agent name,agent_dir,entry_file` 进行一次性配置。
+
+## 目录结构
+
+```text
+.
+├── docs/
+│   └── PORTABILITY.md
+├── profiles/
+│   ├── codex.yaml
+│   ├── claude.yaml
+│   └── generic.yaml
+├── scripts/
+│   └── validate.sh
+├── skills/
+│   ├── prompt-cache-optimizer/        # 提示缓存优化 skill 包
+│   ├── security-secret-audit/         # 密钥泄露审计 skill 包
+│   ├── sync-skill-registry/           # 技能注册表同步工具
+│   └── workflow-todo-state/           # 可恢复 workflow 状态机模板
+├── templates/
+│   ├── cache/                     # 提示缓存规则模板
+│   ├── env/                       # 环境变量模板与检查脚本
+│   └── self-learning/             # 自学习 skill / hook 模板
+└── README.md
 ```
 
-或手动将对应目录复制到目标项目的 `.claude/skills/` 和 `.agents/skills/` 下。
+## 组件
 
-## 如何复用到新项目
+### `templates/self-learning/`
 
-1. **按需拷贝**：本项目不是 npm 包或 git submodule —— 它是源仓库，你应该把需要的组件 **复制** 到目标项目中
-2. **优先使用安装脚本**：多数组件提供 `install.sh` 或 `*-bootstrap.sh`，支持幂等安装和 `--check` 预览模式
-3. **每个组件都自包含**：目录下有完整的 `SKILL.md`、脚本和模板，复制即可用
-4. **修改 .claude/settings.json**：根据目标项目调整权限和 hooks
-5. **运行 sync-skill-registry**：如果新增了技能，运行同步脚本更新注册表
+提供 `digest` 与 `maintain-learnings` 两个 skills，以及跨平台 Python hook `read_learnings.py`。默认兼容 Codex + Claude，也可安装到 `generic` 或任意自定义 agent profile。
 
-## 开发指南
+### `templates/cache/` 与 `skills/prompt-cache-optimizer/`
 
-- 所有技能使用统一的 frontmatter 格式（name、description、category）
-- 技能脚本放在对应目录的 `scripts/` 下
-- 模板包需要附带安装脚本或清晰的 README 说明
+安装提示缓存规则、入口文件引用、提示动态字段检查；`skills/prompt-cache-optimizer/` 还包含观测 schema 和回归样本模板。
+
+### `skills/workflow-todo-state/`
+
+为长任务提供命名 workflow、可恢复状态文件和 phase gate。安装器支持 `--agent-dir`，不再写死 `.claude`。
+
+### `skills/sync-skill-registry/`
+
+扫描任意 `<skills-dir>/*/SKILL.md`，更新 `skill-invocation.md` 中的技能表格。支持 `--profile codex|claude|generic` 和完全自定义路径。
+
+### `skills/security-secret-audit/`
+
+提交前或泄露排查时扫描 API Key、Token、密码、私钥等敏感信息；报告文件、行号、规则名，不输出凭证原文。
+
+### `templates/env/`
+
+面向不同内置 profile 的环境变量规则和 `.env.example` 检查脚本模板。通过 `templates/env/install.py` 复用到目标 agent profile。
+
+## 复用原则
+
+1. **先选 profile**：优先使用内置 `generic`，或者为目标 agent 指定自己的目录与入口文件。
+2. **模板不绑定 OS**：Python 脚本优先；Shell 脚本使用 `/usr/bin/env bash` 或 POSIX `sh`，适合 Linux/macOS/WSL/Git Bash。
+3. **平台专属内容隔离**：OpenAI UI 元数据、Claude settings、其他 agent hook 配置只放在各自 profile。
+4. **安装脚本幂等**：先 dry-run 或 check，再 apply；已有规则文件默认保留。
+5. **同步共享能力，不覆盖专属配置**：多 agent 目录之间只同步共享 skill 逻辑，保留各自入口文件、权限和 hook。
+6. **统一验证**：改动模板或脚本后运行 `scripts/validate.sh`。
+
+`scripts/validate.sh` 包含安装 smoke test 和 `tests/` 中的回归测试；GitHub Actions 会额外执行严格环境模板检查与密钥审计。
+
+更多迁移和接入细节见 [docs/PORTABILITY.md](docs/PORTABILITY.md)。

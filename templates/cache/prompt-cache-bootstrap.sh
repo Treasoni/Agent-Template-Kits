@@ -1,29 +1,33 @@
 #!/usr/bin/env bash
-# Install and audit prompt-cache conventions for Codex and Claude Code projects.
+# Install and audit prompt-cache conventions for agent projects.
 
 set -euo pipefail
 
 MODE="check"
 PLATFORM="both"
 TARGET_DIR="."
+CUSTOM_AGENTS=()
 
 usage() {
   cat <<'USAGE'
 Usage:
-  prompt-cache-bootstrap.sh [--check|--apply] [--platform codex|claude|both] [--target DIR]
+  prompt-cache-bootstrap.sh [--check|--apply] [--platform codex|claude|both|none] [--target DIR]
 
 Modes:
   --check              Report missing cache configuration and suspicious prompt content (default).
   --apply              Install idempotent prompt-cache rules and entry-point references.
 
 Options:
-  --platform PLATFORM  Configure codex, claude, or both (default: both).
+  --platform PLATFORM  Configure built-in profiles: codex, claude, both, or none (default: both).
+  --agent SPEC         Add a custom agent profile: name,agent_dir,entry_file[,rule_path].
+                       Example: generic,.agent,AGENTS.md
   --target DIR         Target project root (default: current directory).
   --help               Show this help message.
 
 Examples:
   bash prompt-cache-bootstrap.sh --check --target ../my-project
   bash prompt-cache-bootstrap.sh --apply --platform both --target ../my-project
+  bash prompt-cache-bootstrap.sh --apply --platform none --agent generic,.agent,AGENTS.md --target ../my-project
 USAGE
 }
 
@@ -45,10 +49,18 @@ while [ "$#" -gt 0 ]; do
       ;;
     --platform)
       if [ "$#" -lt 2 ]; then
-        warn "--platform requires codex, claude, or both"
+        warn "--platform requires codex, claude, both, or none"
         exit 2
       fi
       PLATFORM="$2"
+      shift
+      ;;
+    --agent)
+      if [ "$#" -lt 2 ]; then
+        warn "--agent requires name,agent_dir,entry_file[,rule_path]"
+        exit 2
+      fi
+      CUSTOM_AGENTS+=("$2")
       shift
       ;;
     --target)
@@ -73,9 +85,9 @@ while [ "$#" -gt 0 ]; do
 done
 
 case "$PLATFORM" in
-  codex|claude|both) ;;
+  codex|claude|both|none) ;;
   *)
-    warn "platform must be codex, claude, or both"
+    warn "platform must be codex, claude, both, or none"
     exit 2
     ;;
 esac
@@ -90,6 +102,13 @@ TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
 platform_enabled() {
   local name="$1"
   [ "$PLATFORM" = "both" ] || [ "$PLATFORM" = "$name" ]
+}
+
+target_path() {
+  case "$1" in
+    /*) printf '%s\n' "$1" ;;
+    *) printf '%s/%s\n' "$TARGET_DIR" "$1" ;;
+  esac
 }
 
 rule_content() {
@@ -169,18 +188,22 @@ RULES
 }
 
 install_rule() {
-  local platform_dir="$1"
-  local entry_file="$2"
-  local relative_rule_path="$3"
-  local rule_file="$TARGET_DIR/$platform_dir/rules/common/prompt-cache.md"
-  local entry_path="$TARGET_DIR/$entry_file"
+  local name="$1"
+  local rule_path="$2"
+  local entry_file="$3"
+  local relative_rule_path="$4"
+  local rule_file
+  local entry_path
+
+  rule_file="$(target_path "$rule_path")"
+  entry_path="$(target_path "$entry_file")"
 
   if [ ! -f "$rule_file" ]; then
     mkdir -p "$(dirname "$rule_file")"
     rule_content > "$rule_file"
-    log "created $rule_file"
+    log "created $rule_file for $name"
   else
-    log "kept existing $rule_file"
+    log "kept existing $rule_file for $name"
   fi
 
   if [ -f "$entry_path" ] && grep -qF '<!-- prompt-cache-bootstrap:begin -->' "$entry_path"; then
@@ -200,15 +223,19 @@ install_rule() {
 }
 
 check_rule() {
-  local platform_dir="$1"
-  local entry_file="$2"
-  local rule_file="$TARGET_DIR/$platform_dir/rules/common/prompt-cache.md"
-  local entry_path="$TARGET_DIR/$entry_file"
+  local name="$1"
+  local rule_path="$2"
+  local entry_file="$3"
+  local rule_file
+  local entry_path
+
+  rule_file="$(target_path "$rule_path")"
+  entry_path="$(target_path "$entry_file")"
 
   if [ -f "$rule_file" ]; then
-    log "found $rule_file"
+    log "found $rule_file for $name"
   else
-    warn "missing $rule_file"
+    warn "missing $rule_file for $name"
   fi
 
   if [ -f "$entry_path" ] && grep -qF '<!-- prompt-cache-bootstrap:begin -->' "$entry_path"; then
@@ -218,12 +245,79 @@ check_rule() {
   fi
 }
 
+parse_custom_agent() {
+  local spec="$1"
+  local name agent_dir entry_file rule_path extra
+  IFS=',' read -r name agent_dir entry_file rule_path extra <<EOF
+$spec
+EOF
+  if [ -n "${extra:-}" ] || [ -z "${name:-}" ] || [ -z "${agent_dir:-}" ] || [ -z "${entry_file:-}" ]; then
+    warn "--agent must look like name,agent_dir,entry_file[,rule_path]: $spec"
+    exit 2
+  fi
+  if [ -z "${rule_path:-}" ]; then
+    rule_path="${agent_dir%/}/rules/common/prompt-cache.md"
+  fi
+  printf '%s\t%s\t%s\t%s\n' "$name" "$agent_dir" "$entry_file" "$rule_path"
+}
+
+run_profile() {
+  local action="$1"
+  local name="$2"
+  local agent_dir="$3"
+  local entry_file="$4"
+  local rule_path="$5"
+
+  if [ "$action" = "apply" ]; then
+    install_rule "$name" "$rule_path" "$entry_file" "$rule_path"
+  else
+    check_rule "$name" "$rule_path" "$entry_file"
+  fi
+}
+
+run_profiles() {
+  local action="$1"
+  local spec name agent_dir entry_file rule_path
+
+  if platform_enabled codex; then
+    run_profile "$action" "codex" ".codex" "AGENTS.md" ".codex/rules/common/prompt-cache.md"
+  fi
+  if platform_enabled claude; then
+    run_profile "$action" "claude" ".claude" "CLAUDE.md" ".claude/rules/common/prompt-cache.md"
+  fi
+  if [ "${#CUSTOM_AGENTS[@]}" -gt 0 ]; then
+    for spec in "${CUSTOM_AGENTS[@]}"; do
+      IFS=$'\t' read -r name agent_dir entry_file rule_path <<EOF
+$(parse_custom_agent "$spec")
+EOF
+      run_profile "$action" "$name" "$agent_dir" "$entry_file" "$rule_path"
+    done
+  fi
+}
+
 scan_prompts() {
   local root="$1"
   local prompt_dir
   local found=0
+  local prompt_dirs=("$root/prompts")
+  local spec name agent_dir entry_file rule_path
 
-  for prompt_dir in "$root/prompts" "$root/.co""dex/prompts" "$root/.claude/prompts"; do
+  if platform_enabled codex; then
+    prompt_dirs+=("$root/.co""dex/prompts")
+  fi
+  if platform_enabled claude; then
+    prompt_dirs+=("$root/.claude/prompts")
+  fi
+  if [ "${#CUSTOM_AGENTS[@]}" -gt 0 ]; then
+    for spec in "${CUSTOM_AGENTS[@]}"; do
+      IFS=$'\t' read -r name agent_dir entry_file rule_path <<EOF
+$(parse_custom_agent "$spec")
+EOF
+      prompt_dirs+=("$root/${agent_dir%/}/prompts")
+    done
+  fi
+
+  for prompt_dir in "${prompt_dirs[@]}"; do
     [ -d "$prompt_dir" ] || continue
     found=1
     while IFS= read -r -d '' file; do
@@ -239,20 +333,9 @@ scan_prompts() {
 }
 
 if [ "$MODE" = "apply" ]; then
-  if platform_enabled codex; then
-    install_rule ".co""dex" "AGENTS.md" ".co""dex/rules/common/prompt-cache.md"
-  fi
-  if platform_enabled claude; then
-    install_rule ".claude" "CLAUDE.md" ".claude/rules/common/prompt-cache.md"
-  fi
+  run_profiles apply
   log "installation complete; run --check to review the project"
 else
-  if platform_enabled codex; then
-    check_rule ".co""dex" "AGENTS.md"
-  fi
-  if platform_enabled claude; then
-    check_rule ".claude" "CLAUDE.md"
-  fi
+  run_profiles check
   scan_prompts "$TARGET_DIR"
 fi
-
