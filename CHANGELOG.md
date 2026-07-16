@@ -12,6 +12,7 @@
 
 ### 兼容性与行为
 
+- 统一安装器现在会把 `prompt-cache-optimizer` 和 `sync-skill-registry` 完整复制到每个所选 profile 的 `skills_dir`，并在复制后生成注册表；不会再只安装规则或注册表而遗漏可调用 skill。
 - Python 安装组件在 Windows、Linux 和 macOS 可运行；`prompt-cache` 与 `workflow` 组件仍需要 Bash。
 - 在 Windows 上，统一安装器会先从 `PATH` 查找 Bash，再检查常见 Git for Windows 安装路径；找不到时不会写入目标项目，并提示安装 Git Bash 或使用 WSL。
 - 自动检测不会仅凭通用的 `AGENTS.md` 判断运行时，避免把普通项目误识别为特定 agent。

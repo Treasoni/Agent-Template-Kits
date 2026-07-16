@@ -21,13 +21,17 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import pathlib
+import re
+import shutil
 import sys
 
 SCRIPT_DERIVED_SKILL_DIR = pathlib.Path(__file__).resolve().parent.parent.parent  # e.g. .claude/skills/
 SCRIPT_DERIVED_INVOCATION_FILE = SCRIPT_DERIVED_SKILL_DIR.parent / "rules" / "common" / "skill-invocation.md"
-PROFILE_ROOT = pathlib.Path(__file__).resolve().parents[3] / "profiles"
+SOURCE_SKILL_DIR = pathlib.Path(__file__).resolve().parent.parent
+PROFILE_ROOT = SOURCE_SKILL_DIR / "profiles"
+if not PROFILE_ROOT.is_dir():
+    PROFILE_ROOT = pathlib.Path(__file__).resolve().parents[3] / "profiles"
 
 
 def parse_flat_yaml(path: pathlib.Path) -> dict[str, str]:
@@ -409,6 +413,11 @@ def parse_args(argv=None):
         help="如果注册表文件不存在，则创建最小骨架。",
     )
     parser.add_argument(
+        "--with-skill",
+        action="store_true",
+        help="将 sync-skill-registry skill 复制到所选 profile 的 skills 目录；已有目录保留。",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="仅预览变更，不写入文件",
@@ -459,6 +468,25 @@ def registry_skeleton_text(list_heading: str, next_heading: str) -> str:
     )
 
 
+def install_skill(skills_dir: pathlib.Path, dry_run: bool) -> None:
+    """Copy this self-contained skill before scanning it into the registry."""
+    target = skills_dir / SOURCE_SKILL_DIR.name
+    if target.resolve() == SOURCE_SKILL_DIR.resolve():
+        print(f"跳过已在安装目录中的 skill: {target}")
+        return
+    if target.exists():
+        print(f"跳过已有 skill: {target}")
+        return
+    if dry_run:
+        print(f"Dry run: 将复制 skill: {target}")
+        return
+    skills_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(SOURCE_SKILL_DIR, target)
+    if PROFILE_ROOT.is_dir():
+        shutil.copytree(PROFILE_ROOT, target / "profiles")
+    print(f"已复制 skill: {target}")
+
+
 def create_registry_skeleton(path: pathlib.Path, list_heading: str, next_heading: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(registry_skeleton_text(list_heading, next_heading), encoding="utf-8")
@@ -468,6 +496,9 @@ def main():
     args = parse_args()
     skills_dir, invocation_file = default_paths(args)
     text = None
+
+    if args.with_skill:
+        install_skill(skills_dir, args.dry_run)
 
     if not invocation_file.exists():
         if args.create:

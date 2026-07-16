@@ -114,6 +114,88 @@ class RefactorRegressionTests(unittest.TestCase):
             ]
             self.assertIn("python3 '.codebuddy/hooks/read_learnings.py'", commands)
 
+    def test_unified_installer_installs_every_component_for_every_profile(self) -> None:
+        """Every profile gets all callable skills and their declared support files."""
+        for profile_path in sorted((ROOT / "profiles").glob("*.yaml")):
+            values = {}
+            for raw_line in profile_path.read_text(encoding="utf-8").splitlines():
+                if not raw_line or raw_line.startswith("#") or ":" not in raw_line:
+                    continue
+                key, value = raw_line.split(":", 1)
+                values[key.strip()] = value.strip().strip("\"'")
+
+            with self.subTest(profile=values["name"]), tempfile.TemporaryDirectory() as directory:
+                target = Path(directory)
+                run(
+                    "python3",
+                    "scripts/install.py",
+                    "--target",
+                    str(target),
+                    "--profile",
+                    values["name"],
+                    "--components",
+                    "self-learning,env,prompt-cache,workflow,registry",
+                    "--apply",
+                    "--yes",
+                )
+
+                skills_dir = target / values["skills_dir"]
+                for skill in (
+                    "digest",
+                    "maintain-learnings",
+                    "prompt-cache-optimizer",
+                    "workflow-todo-state",
+                    "sync-skill-registry",
+                ):
+                    self.assertTrue((skills_dir / skill / "SKILL.md").is_file())
+
+                self.assertTrue((target / values["prompt_cache_rule"]).is_file())
+                self.assertTrue((target / values["rules_dir"] / "common" / "env.md").is_file())
+                self.assertTrue((target / values["scripts_dir"] / "check-env-template.sh").is_file())
+                self.assertTrue((target / values["rules_dir"] / "workflow-routing.md").is_file())
+
+                registry_path = target / values.get(
+                    "skill_registry",
+                    f'{values["rules_dir"]}/common/skill-invocation.md',
+                )
+                registry = registry_path.read_text(encoding="utf-8")
+                for skill in (
+                    "digest",
+                    "maintain-learnings",
+                    "prompt-cache-optimizer",
+                    "workflow-todo-state",
+                    "sync-skill-registry",
+                ):
+                    self.assertIn(skill, registry)
+
+                run(
+                    "bash",
+                    str(skills_dir / "prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh"),
+                    "--check",
+                    "--platform",
+                    values["name"],
+                    "--target",
+                    str(target),
+                )
+                run(
+                    "python3",
+                    str(skills_dir / "sync-skill-registry/scripts/sync_skill_registry.py"),
+                    "--profile",
+                    values["name"],
+                    "--root",
+                    str(target),
+                    "--dry-run",
+                )
+                run(
+                    "bash",
+                    str(skills_dir / "workflow-todo-state/scripts/install.sh"),
+                    str(target),
+                    "--profile",
+                    values["name"],
+                    "--init-layout",
+                    "--update-agents",
+                )
+
     def test_mainstream_profiles_are_available_to_registry_and_shell_installers(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory)

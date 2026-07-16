@@ -87,7 +87,7 @@ python3 scripts/install.py \
   --apply --yes
 ```
 
-可选组件是 `self-learning`、`env`、`prompt-cache`、`workflow` 和 `registry`，默认全部安装。`prompt-cache` 与 `workflow` 使用 Bash：Linux/macOS 可直接运行；Windows 下安装器会寻找 Git Bash，找不到时会明确提示安装 Git for Windows 或使用 WSL。`--overwrite` 和 `--force-workflow` 都需要显式给出，避免覆盖已有定制内容。
+可选组件是 `self-learning`、`env`、`prompt-cache`、`workflow` 和 `registry`，默认全部安装。统一安装器会把 `prompt-cache-optimizer`、`workflow-todo-state` 和 `sync-skill-registry` 的完整 skill 一并复制到所选 profile 的 skills 目录，再生成注册表。`prompt-cache` 与 `workflow` 使用 Bash：Linux/macOS 可直接运行；Windows 下安装器会寻找 Git Bash，找不到时会明确提示安装 Git for Windows 或使用 WSL。`--overwrite` 和 `--force-workflow` 都需要显式给出，避免覆盖已有定制内容。
 
 ## 3. Codex 项目的推荐安装
 
@@ -104,10 +104,11 @@ python3 templates/env/install.py \
   --target "$TARGET" \
   --profile codex
 
-# 3. 提示缓存规则、观测 schema 和回归样本
+# 3. 提示缓存 skill 和规则
 bash skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh \
   --apply \
   --platform codex \
+  --with-skill \
   --target "$TARGET"
 
 # 4. 可恢复 workflow、routing 规则和状态脚本
@@ -122,13 +123,13 @@ bash skills/workflow-todo-state/scripts/install.sh \
 python3 skills/sync-skill-registry/scripts/sync_skill_registry.py \
   --profile codex \
   --root "$TARGET" \
-  --create \
+  --create --with-skill \
   --dry-run
 
 python3 skills/sync-skill-registry/scripts/sync_skill_registry.py \
   --profile codex \
   --root "$TARGET" \
-  --create
+  --create --with-skill
 ```
 
 安装器会创建缺失目录，但 `$TARGET` 本身必须已存在。安装完成后，建议先检查目标项目的 `git diff`，再提交。
@@ -140,9 +141,9 @@ Claude Code 使用同样的组合，把 profile 替换为 `claude`：
 ```bash
 python3 templates/self-learning/install.py --target "$TARGET" --profile claude
 python3 templates/env/install.py --target "$TARGET" --profile claude
-bash skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh --apply --platform claude --target "$TARGET"
+bash skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh --apply --platform claude --with-skill --target "$TARGET"
 bash skills/workflow-todo-state/scripts/install.sh "$TARGET" --profile claude --with-skill --init-layout --update-agents
-python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --profile claude --root "$TARGET" --create --dry-run
+python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --profile claude --root "$TARGET" --create --with-skill --dry-run
 ```
 
 其他内置 profile 也使用相同命令。例如安装到 Gemini CLI 项目：
@@ -150,9 +151,9 @@ python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --profile clau
 ```bash
 python3 templates/self-learning/install.py --target "$TARGET" --profile gemini
 python3 templates/env/install.py --target "$TARGET" --profile gemini
-bash skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh --apply --platform gemini --target "$TARGET"
+bash skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh --apply --platform gemini --with-skill --target "$TARGET"
 bash skills/workflow-todo-state/scripts/install.sh "$TARGET" --profile gemini --with-skill --init-layout --update-agents
-python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --profile gemini --root "$TARGET" --create --dry-run
+python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --profile gemini --root "$TARGET" --create --with-skill --dry-run
 ```
 
 Generic profile 也可直接使用内置名称：
@@ -163,9 +164,10 @@ python3 templates/env/install.py --target "$TARGET" --profile generic
 bash skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh \
   --apply \
   --platform generic \
+  --with-skill \
   --target "$TARGET"
 bash skills/workflow-todo-state/scripts/install.sh "$TARGET" --profile generic --with-skill --init-layout --update-agents
-python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --profile generic --root "$TARGET" --create --dry-run
+python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --profile generic --root "$TARGET" --create --with-skill --dry-run
 ```
 
 dry-run 确认无误后，去掉 `--dry-run` 再运行一次注册表命令。
@@ -195,12 +197,13 @@ python3 templates/self-learning/install.py --target "$TARGET" --profile codex --
 
 ### 提示缓存
 
-推荐使用完整版，它会额外安装观测 schema 和回归样本：
+推荐使用完整版，它会安装 skill 和规则：
 
 ```bash
 bash skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh \
   --apply \
   --platform codex \
+  --with-skill \
   --target "$TARGET"
 ```
 
@@ -214,6 +217,8 @@ bash templates/cache/prompt-cache-bootstrap.sh \
 ```
 
 审计现有配置时把 `--apply` 换成 `--check`。详见 [templates/cache/README.md](templates/cache/README.md) 和 [skills/prompt-cache-optimizer/SKILL.md](skills/prompt-cache-optimizer/SKILL.md)。
+
+只有 agent 已连接能够自动记录 provider usage 的 API 调用后，才额外加 `--with-observability`；它会安装 `/.llm/prompt-cache/` 的 schema 和回归样本合同。直接使用 Codex 时不要加此选项，也无需手填 token 或费用。
 
 ### 环境变量规范
 
@@ -258,14 +263,14 @@ bash skills/workflow-todo-state/scripts/install.sh \
 python3 skills/sync-skill-registry/scripts/sync_skill_registry.py \
   --profile codex \
   --root "$TARGET" \
-  --create \
+  --create --with-skill \
   --dry-run
 
 # 应用
 python3 skills/sync-skill-registry/scripts/sync_skill_registry.py \
   --profile codex \
   --root "$TARGET" \
-  --create
+  --create --with-skill
 ```
 
 脚本只管理生成区中标记为本地受管的 skills，会保留手工外部条目。详见 [skills/sync-skill-registry/SKILL.md](skills/sync-skill-registry/SKILL.md)。
@@ -321,6 +326,7 @@ bash skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh \
   --apply \
   --platform none \
   --agent myagent,.my-agent,INSTRUCTIONS.md \
+  --with-skill \
   --target "$TARGET"
 
 bash skills/workflow-todo-state/scripts/install.sh \
@@ -405,6 +411,8 @@ target-project/
 ├── .agents/skills/
 │   ├── digest/
 │   ├── maintain-learnings/
+│   ├── prompt-cache-optimizer/
+│   ├── sync-skill-registry/
 │   └── workflow-todo-state/
 ├── .codex/
 │   ├── hooks/
@@ -412,11 +420,12 @@ target-project/
 │   ├── scripts/
 │   └── workflows/
 ├── .learnings/
-├── .llm/prompt-cache/
 ├── workspace/workflow-runs/
 ├── .codex/hooks.json
 └── AGENTS.md
 ```
+
+仅在项目已接通自动 LLM usage 采集时，才会额外出现 `/.llm/prompt-cache/`。
 
 ## 本仓库的目录职责
 

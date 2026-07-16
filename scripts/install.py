@@ -157,14 +157,36 @@ def commands_for(profile: Profile, target: Path, components: tuple[str, ...], ar
             command.append("--overwrite")
         commands.append(command)
     if "prompt-cache" in components:
-        commands.append([bash, str(ROOT / "skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh"), "--apply", "--platform", profile.name, "--target", str(target)])
+        commands.append(
+            [
+                bash,
+                str(ROOT / "skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh"),
+                "--apply",
+                "--platform",
+                profile.name,
+                "--with-skill",
+                "--target",
+                str(target),
+            ]
+        )
     if "workflow" in components:
         command = [bash, str(ROOT / "skills/workflow-todo-state/scripts/install.sh"), str(target), "--profile", profile.name, "--with-skill", "--init-layout", "--update-agents"]
         if args.force_workflow:
             command.append("--force")
         commands.append(command)
     if "registry" in components:
-        commands.append([sys.executable, str(ROOT / "skills/sync-skill-registry/scripts/sync_skill_registry.py"), "--profile", profile.name, "--root", str(target), "--create"])
+        commands.append(
+            [
+                sys.executable,
+                str(ROOT / "skills/sync-skill-registry/scripts/sync_skill_registry.py"),
+                "--profile",
+                profile.name,
+                "--root",
+                str(target),
+                "--create",
+                "--with-skill",
+            ]
+        )
     return commands
 
 

@@ -57,8 +57,14 @@ test -x "$TMP_DIR/.agent/scripts/check-env-template.sh"
 
 log "prompt-cache generic install"
 bash templates/cache/prompt-cache-bootstrap.sh --apply --platform none --agent generic,.agent,AGENTS.md --target "$TMP_DIR" >/dev/null
-bash skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh --apply --platform none --agent generic,.agent,AGENTS.md --target "$TMP_DIR" >/dev/null
+bash skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh --apply --platform none --agent generic,.agent,AGENTS.md --with-skill --target "$TMP_DIR" >/dev/null
 bash skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh --check --platform none --agent generic,.agent,AGENTS.md --target "$TMP_DIR" >/dev/null
+test -f "$TMP_DIR/.agent/skills/prompt-cache-optimizer/SKILL.md"
+test ! -e "$TMP_DIR/.llm"
+bash skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh --apply --platform none --agent generic,.agent,AGENTS.md --with-observability --target "$TMP_DIR" >/dev/null
+bash skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh --check --platform none --agent generic,.agent,AGENTS.md --with-observability --target "$TMP_DIR" >/dev/null
+test -f "$TMP_DIR/.llm/prompt-cache/llm-usage-event.schema.json"
+test -f "$TMP_DIR/.llm/prompt-cache/regression-cases.json"
 
 log "workflow generic install"
 bash skills/workflow-todo-state/scripts/install.sh "$TMP_DIR" --agent-dir .agent --with-skill --init-layout --update-agents --force >/dev/null
@@ -76,9 +82,10 @@ bash "$TMP_DIR/.agent/scripts/sync-workflow-routing.sh" >/dev/null
 bash "$TMP_DIR/.agent/scripts/sync-workflow-routing.sh" --check >/dev/null
 
 log "skill registry generic dry-run/apply"
-python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --profile generic --root "$TMP_DIR" --create --dry-run >/dev/null
+python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --profile generic --root "$TMP_DIR" --create --with-skill --dry-run >/dev/null
 test ! -e "$TMP_DIR/.agent/rules/common/skill-invocation.md"
-python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --profile generic --root "$TMP_DIR" --create >/dev/null
+python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --profile generic --root "$TMP_DIR" --create --with-skill >/dev/null
+test -f "$TMP_DIR/.agent/skills/sync-skill-registry/SKILL.md"
 
 log "learning hook"
 python3 "$TMP_DIR/.agent/hooks/read_learnings.py" --project-root "$TMP_DIR" >/dev/null

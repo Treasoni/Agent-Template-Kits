@@ -17,8 +17,9 @@ python3 .claude/skills/sync-skill-registry/scripts/sync_skill_registry.py --dry-
 # 2️⃣ 确认无误后应用
 python3 .claude/skills/sync-skill-registry/scripts/sync_skill_registry.py
 
-# Generic profile 示例
-python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --profile generic --root /path/to/project --create --dry-run
+# 首次安装时先预览，再去掉 --dry-run 执行；skill 会随首次应用复制到目标项目
+python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --profile generic --root /path/to/project --create --with-skill --dry-run
+python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --profile generic --root /path/to/project --create --with-skill
 
 # 完全自定义路径
 python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --root /path/to/project --skills-dir .my-agent/skills --registry-file .my-agent/rules/common/skill-invocation.md --dry-run

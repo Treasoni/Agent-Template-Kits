@@ -36,10 +36,12 @@ generic -> .agent/skills + .agent/rules + .agent/hooks + AGENTS.md
 ```bash
 python3 templates/self-learning/install.py --target . --custom-agent myagent:.my-agent/skills:.my-agent/hooks
 python3 templates/env/install.py --target . --custom-agent myagent:.my-agent:INSTRUCTIONS.md
-bash templates/cache/prompt-cache-bootstrap.sh --apply --platform none --agent myagent,.my-agent,INSTRUCTIONS.md --target .
+bash skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh --apply --platform none --agent myagent,.my-agent,INSTRUCTIONS.md --with-skill --target .
 bash skills/workflow-todo-state/scripts/install.sh . --agent-dir .my-agent --entry-file INSTRUCTIONS.md --with-skill --init-layout --update-agents
-python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --root . --skills-dir .my-agent/skills --registry-file .my-agent/rules/common/skill-invocation.md --create --dry-run
+python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --root . --skills-dir .my-agent/skills --registry-file .my-agent/rules/common/skill-invocation.md --create --with-skill --dry-run
 ```
+
+确认注册表预览后，去掉 `--dry-run` 执行；首次应用会复制 `sync-skill-registry` skill。
 
 需要在多个安装器中复用同一布局，或路径包含 Windows 盘符冒号时，使用与 `profiles/*.yaml` 相同的 scalar YAML profile：
 
