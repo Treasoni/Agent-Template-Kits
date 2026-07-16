@@ -1,7 +1,9 @@
 name: generic
 description: Portable default profile for agents without a dedicated layout.
+agent_dir: .agent
 skills_dir: .agent/skills
 rules_dir: .agent/rules
+scripts_dir: .agent/scripts
 hooks_dir: .agent/hooks
 entry_file: AGENTS.md
 hook_config: ""

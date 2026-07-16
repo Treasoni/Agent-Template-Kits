@@ -27,21 +27,53 @@ import sys
 
 SCRIPT_DERIVED_SKILL_DIR = pathlib.Path(__file__).resolve().parent.parent.parent  # e.g. .claude/skills/
 SCRIPT_DERIVED_INVOCATION_FILE = SCRIPT_DERIVED_SKILL_DIR.parent / "rules" / "common" / "skill-invocation.md"
+PROFILE_ROOT = pathlib.Path(__file__).resolve().parents[3] / "profiles"
 
-AGENT_PROFILES = {
-    "codex": {
-        "skills_dir": ".agents/skills",
-        "registry_file": ".codex/rules/common/skill-invocation.md",
-    },
-    "claude": {
-        "skills_dir": ".claude/skills",
-        "registry_file": ".claude/rules/common/skill-invocation.md",
-    },
-    "generic": {
-        "skills_dir": ".agent/skills",
-        "registry_file": ".agent/rules/common/skill-invocation.md",
-    },
-}
+
+def parse_flat_yaml(path: pathlib.Path) -> dict[str, str]:
+    """Read the repository's scalar-only profile format without PyYAML."""
+    values: dict[str, str] = {}
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        values[key.strip()] = value.strip().strip('"\'')
+    return values
+
+
+def load_agent_profiles() -> dict[str, dict[str, str]]:
+    profiles: dict[str, dict[str, str]] = {}
+    for path in sorted(PROFILE_ROOT.glob("*.yaml")):
+        values = parse_flat_yaml(path)
+        name = values.get("name", path.stem)
+        skills_dir = values.get("skills_dir")
+        rules_dir = values.get("rules_dir")
+        if not skills_dir or not rules_dir:
+            continue
+        profiles[name] = {
+            "skills_dir": skills_dir,
+            "registry_file": values.get("skill_registry") or f"{rules_dir}/common/skill-invocation.md",
+        }
+    if profiles:
+        return profiles
+    return {
+        "codex": {
+            "skills_dir": ".agents/skills",
+            "registry_file": ".codex/rules/common/skill-invocation.md",
+        },
+        "claude": {
+            "skills_dir": ".claude/skills",
+            "registry_file": ".claude/rules/common/skill-invocation.md",
+        },
+        "generic": {
+            "skills_dir": ".agent/skills",
+            "registry_file": ".agent/rules/common/skill-invocation.md",
+        },
+    }
+
+
+AGENT_PROFILES = load_agent_profiles()
 
 # 已知技能的默认分类回退（用于 symlink 技能或未声明 category 的情况）
 FALLBACK_CATEGORIES = {

@@ -4,6 +4,10 @@ set -euo pipefail
 MODE="apply"
 ROOT_DIR=""
 AGENT_DIR=""
+WORKFLOWS_DIR=""
+RULES_DIR=""
+DEFAULT_WORKFLOWS_DIR="__DEFAULT_WORKFLOWS_DIR__"
+DEFAULT_RULES_DIR="__DEFAULT_RULES_DIR__"
 PYTHON_BIN="${PYTHON:-python3}"
 START_MARKER="<!-- workflow-routing:generated:start -->"
 END_MARKER="<!-- workflow-routing:generated:end -->"
@@ -11,12 +15,14 @@ END_MARKER="<!-- workflow-routing:generated:end -->"
 usage() {
   cat <<'USAGE'
 Usage:
-  sync-workflow-routing.sh [--check] [--root DIR] [--agent-dir DIR]
+  sync-workflow-routing.sh [--check] [--root DIR] [--agent-dir DIR] [--workflows-dir DIR] [--rules-dir DIR]
 
 Options:
   --check          Fail if workflow-routing.md is stale instead of updating it.
   --root DIR       Project root. Defaults to the parent of the installed agent dir.
   --agent-dir DIR  Agent configuration directory (default: inferred from script path).
+  --workflows-dir DIR  Workflow definition directory, relative to the project root.
+  --rules-dir DIR  Rule directory containing workflow-routing.md, relative to the project root.
   --help           Show this help message.
 USAGE
 }
@@ -44,6 +50,22 @@ while [ "$#" -gt 0 ]; do
         exit 2
       fi
       AGENT_DIR="${2%/}"
+      shift
+      ;;
+    --workflows-dir)
+      if [ "$#" -lt 2 ]; then
+        warn "--workflows-dir requires a directory"
+        exit 2
+      fi
+      WORKFLOWS_DIR="${2%/}"
+      shift
+      ;;
+    --rules-dir)
+      if [ "$#" -lt 2 ]; then
+        warn "--rules-dir requires a directory"
+        exit 2
+      fi
+      RULES_DIR="${2%/}"
       shift
       ;;
     --help|-h)
@@ -79,8 +101,16 @@ fi
 
 ROOT_DIR="$(cd "$ROOT_DIR" && pwd)"
 AGENT_DIR="${AGENT_DIR%/}"
-WORKFLOWS_DIR="$ROOT_DIR/$AGENT_DIR/workflows"
-ROUTING_FILE="$ROOT_DIR/$AGENT_DIR/rules/workflow-routing.md"
+if [ "$DEFAULT_WORKFLOWS_DIR" = "__DEFAULT_WORKFLOWS_DIR__" ]; then
+  DEFAULT_WORKFLOWS_DIR=""
+fi
+if [ "$DEFAULT_RULES_DIR" = "__DEFAULT_RULES_DIR__" ]; then
+  DEFAULT_RULES_DIR=""
+fi
+WORKFLOWS_DIR="${WORKFLOWS_DIR:-${DEFAULT_WORKFLOWS_DIR:-${AGENT_DIR}/workflows}}"
+RULES_DIR="${RULES_DIR:-${DEFAULT_RULES_DIR:-${AGENT_DIR}/rules}}"
+WORKFLOWS_PATH="$ROOT_DIR/$WORKFLOWS_DIR"
+ROUTING_FILE="$ROOT_DIR/$RULES_DIR/workflow-routing.md"
 
 if [ ! -f "$ROUTING_FILE" ]; then
   warn "routing file not found: $ROUTING_FILE"
@@ -119,11 +149,11 @@ generate_table() {
   printf '%s\n' '| Workflow ID | Required | When To Use | Positive Triggers | Excludes | Definition | State File Pattern |'
   printf '%s\n' '| --- | --- | --- | --- | --- | --- | --- |'
 
-  if [ ! -d "$WORKFLOWS_DIR" ]; then
+  if [ ! -d "$WORKFLOWS_PATH" ]; then
     return
   fi
 
-  for workflow_dir in "$WORKFLOWS_DIR"/*; do
+  for workflow_dir in "$WORKFLOWS_PATH"/*; do
     [ -d "$workflow_dir" ] || continue
     routing_file="$workflow_dir/routing.yaml"
     [ -f "$routing_file" ] || continue
@@ -137,7 +167,7 @@ generate_table() {
     triggers="$(yaml_value "$routing_file" "triggers")"
     excludes="$(yaml_value "$routing_file" "excludes")"
     state_file_pattern="$(yaml_value "$routing_file" "state_file_pattern")"
-    definition="${AGENT_DIR}/workflows/${workflow_id}/workflow.md"
+    definition="${WORKFLOWS_DIR}/${workflow_id}/workflow.md"
 
     printf '| `%s` | %s | %s | %s | %s | `%s` | `%s` |\n' \
       "$(escape_md "$workflow_id")" \

@@ -1,7 +1,9 @@
 name: claude
 description: Built-in profile for Claude Code-style projects.
+agent_dir: .claude
 skills_dir: .claude/skills
 rules_dir: .claude/rules
+scripts_dir: .claude/scripts
 hooks_dir: .claude/hooks
 entry_file: CLAUDE.md
 hook_config: .claude/settings.json

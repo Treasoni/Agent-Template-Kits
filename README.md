@@ -29,7 +29,7 @@
 | ripgrep (`rg`) | 严格 env 检查 | 使用 env 检查时必需 |
 | Perl | workflow 状态和密钥检测 | 使用对应组件时必需 |
 
-Python 脚本可直接在原生 Windows 运行。Bash 脚本建议在 WSL 或 Git Bash 中使用。
+Python 脚本可直接在原生 Windows 运行。Bash 脚本可在 Linux、macOS、WSL 或 Git Bash 中使用；统一安装器会自动查找系统 Bash 和常见 Git Bash 安装位置。
 
 ## 1. 获取模板并指定目标项目
 
@@ -52,9 +52,42 @@ Profile 决定把 skills、rules、hooks 和入口说明写到哪里。
 | --- | --- | --- | --- | --- |
 | `codex` | `.agents/skills` | `.codex/rules` | `.codex/hooks` | `AGENTS.md` |
 | `claude` | `.claude/skills` | `.claude/rules` | `.claude/hooks` | `CLAUDE.md` |
+| `codebuddy` | `.codebuddy/skills` | `.codebuddy/rules` | `.codebuddy/hooks` | `CODEBUDDY.md` |
+| `cursor` | `.cursor/skills` | `.cursor/rules` | — | `AGENTS.md` |
+| `gemini` | `.gemini/skills` | `.gemini/rules` | — | `GEMINI.md` |
+| `github-copilot` | `.github/skills` | `.github/instructions` | — | `.github/copilot-instructions.md` |
+| `cline` | `.cline/skills` | `.clinerules` | — | `AGENTS.md` |
+| `roo-code` | `.roo/skills` | `.roo/rules` | — | `AGENTS.md` |
+| `windsurf` | `.windsurf/skills` | `.windsurf/rules` | — | `AGENTS.md` |
+| `opencode` | `.opencode/skills` | `.opencode/rules` | — | `AGENTS.md` |
+| `qwen-code` | `.qwen/skills` | `.qwen/rules` | — | `QWEN.md` |
 | `generic` | `.agent/skills` | `.agent/rules` | `.agent/hooks` | `AGENTS.md` |
 
-使用 Codex 选 `codex`，使用 Claude Code 选 `claude`。未在表中的 Agent 优先选 `generic`，或在后文使用自定义 profile。
+使用对应的 profile 名称即可，例如 CodeBuddy Code 用 `codebuddy`、Gemini CLI 用 `gemini`、GitHub Copilot 用 `github-copilot`、Qwen Code 用 `qwen-code`。未在表中的 Agent 优先选 `generic`，或在后文使用自定义 profile。
+
+## 2.1 自动检测与统一安装（推荐）
+
+统一安装器默认只预览，先根据目标项目已有的 agent 目录、配置和入口文件显示候选项及证据，不会猜测只含 `AGENTS.md` 的项目。
+
+```bash
+# 只检测，不修改目标项目
+python3 scripts/install.py --target "$TARGET" --detect
+
+# 采用所有检测到的 profile，仍然只预览将执行的命令
+python3 scripts/install.py --target "$TARGET" --use-detected
+
+# 手动选择 CodeBuddy；--apply 时会要求确认
+python3 scripts/install.py --target "$TARGET" --profile codebuddy --apply
+
+# 自动选择并在非交互环境执行；仅安装需要的能力
+python3 scripts/install.py \
+  --target "$TARGET" \
+  --use-detected \
+  --components self-learning,env,registry \
+  --apply --yes
+```
+
+可选组件是 `self-learning`、`env`、`prompt-cache`、`workflow` 和 `registry`，默认全部安装。`prompt-cache` 与 `workflow` 使用 Bash：Linux/macOS 可直接运行；Windows 下安装器会寻找 Git Bash，找不到时会明确提示安装 Git for Windows 或使用 WSL。`--overwrite` 和 `--force-workflow` 都需要显式给出，避免覆盖已有定制内容。
 
 ## 3. Codex 项目的推荐安装
 
@@ -100,7 +133,7 @@ python3 skills/sync-skill-registry/scripts/sync_skill_registry.py \
 
 安装器会创建缺失目录，但 `$TARGET` 本身必须已存在。安装完成后，建议先检查目标项目的 `git diff`，再提交。
 
-## 4. Claude Code 和 Generic 安装
+## 4. 其他内置 Profile 与 Generic 安装
 
 Claude Code 使用同样的组合，把 profile 替换为 `claude`：
 
@@ -112,15 +145,24 @@ bash skills/workflow-todo-state/scripts/install.sh "$TARGET" --profile claude --
 python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --profile claude --root "$TARGET" --create --dry-run
 ```
 
-Generic profile 的提示缓存脚本需要显式描述自定义 Agent：
+其他内置 profile 也使用相同命令。例如安装到 Gemini CLI 项目：
+
+```bash
+python3 templates/self-learning/install.py --target "$TARGET" --profile gemini
+python3 templates/env/install.py --target "$TARGET" --profile gemini
+bash skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh --apply --platform gemini --target "$TARGET"
+bash skills/workflow-todo-state/scripts/install.sh "$TARGET" --profile gemini --with-skill --init-layout --update-agents
+python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --profile gemini --root "$TARGET" --create --dry-run
+```
+
+Generic profile 也可直接使用内置名称：
 
 ```bash
 python3 templates/self-learning/install.py --target "$TARGET" --profile generic
 python3 templates/env/install.py --target "$TARGET" --profile generic
 bash skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh \
   --apply \
-  --platform none \
-  --agent generic,.agent,AGENTS.md \
+  --platform generic \
   --target "$TARGET"
 bash skills/workflow-todo-state/scripts/install.sh "$TARGET" --profile generic --with-skill --init-layout --update-agents
 python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --profile generic --root "$TARGET" --create --dry-run
@@ -253,8 +295,10 @@ AUDITOR="$PWD/skills/security-secret-audit/scripts/audit-secrets.sh"
 
 ```yaml
 name: myagent
+agent_dir: .my-agent
 skills_dir: .my-agent/skills
 rules_dir: .my-agent/rules
+scripts_dir: .my-agent/scripts
 hooks_dir: .my-agent/hooks
 entry_file: INSTRUCTIONS.md
 hook_config: ""
@@ -389,6 +433,7 @@ docs/           便携性和第三方 Agent 接入说明
 
 ## 进一步阅读
 
+- [更新说明](CHANGELOG.md)
 - [跨 Agent 与跨平台接入](docs/PORTABILITY.md)
 - [Agent profile 字段说明](profiles/README.md)
 - [自学习模板](templates/self-learning/README.md)

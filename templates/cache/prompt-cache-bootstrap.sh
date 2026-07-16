@@ -7,18 +7,29 @@ MODE="check"
 PLATFORM="both"
 TARGET_DIR="."
 CUSTOM_AGENTS=()
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROFILE_ROOT="${PROMPT_CACHE_PROFILE_ROOT:-}"
+
+if [ -z "$PROFILE_ROOT" ]; then
+  for candidate in "$SCRIPT_DIR/../../profiles" "$SCRIPT_DIR/../../../profiles"; do
+    if [ -d "$candidate" ]; then
+      PROFILE_ROOT="$(cd "$candidate" && pwd)"
+      break
+    fi
+  done
+fi
 
 usage() {
   cat <<'USAGE'
 Usage:
-  prompt-cache-bootstrap.sh [--check|--apply] [--platform codex|claude|both|none] [--target DIR]
+  prompt-cache-bootstrap.sh [--check|--apply] [--platform PROFILE|both|all|none] [--target DIR]
 
 Modes:
   --check              Report missing cache configuration and suspicious prompt content (default).
   --apply              Install idempotent prompt-cache rules and entry-point references.
 
 Options:
-  --platform PLATFORM  Configure built-in profiles: codex, claude, both, or none (default: both).
+  --platform PLATFORM  Configure one built-in profile, `both` (codex + claude), `all`, or `none` (default: both).
   --agent SPEC         Add a custom agent profile: name,agent_dir,entry_file[,rule_path].
                        Example: generic,.agent,AGENTS.md
   --target DIR         Target project root (default: current directory).
@@ -27,7 +38,8 @@ Options:
 Examples:
   bash prompt-cache-bootstrap.sh --check --target ../my-project
   bash prompt-cache-bootstrap.sh --apply --platform both --target ../my-project
-  bash prompt-cache-bootstrap.sh --apply --platform none --agent generic,.agent,AGENTS.md --target ../my-project
+  bash prompt-cache-bootstrap.sh --apply --platform gemini --target ../my-project
+  bash prompt-cache-bootstrap.sh --apply --platform none --agent myagent,.agent,AGENTS.md --target ../my-project
 USAGE
 }
 
@@ -37,6 +49,69 @@ log() {
 
 warn() {
   printf '%s\n' "prompt-cache: warning: $*" >&2
+}
+
+profile_value() {
+  local profile_file="$1"
+  local key="$2"
+  sed -n "s/^${key}:[[:space:]]*//p" "$profile_file" | head -n 1 | sed "s/^['\"]//; s/['\"]$//"
+}
+
+emit_profile_spec() {
+  local name="$1"
+  local profile_file="${PROFILE_ROOT}/${name}.yaml"
+  local agent_dir entry_file rule_path rules_dir
+
+  if [ -n "$PROFILE_ROOT" ] && [ -f "$profile_file" ]; then
+    agent_dir="$(profile_value "$profile_file" agent_dir)"
+    entry_file="$(profile_value "$profile_file" entry_file)"
+    rule_path="$(profile_value "$profile_file" prompt_cache_rule)"
+    rules_dir="$(profile_value "$profile_file" rules_dir)"
+    rule_path="${rule_path:-${rules_dir}/common/prompt-cache.md}"
+    if [ -z "$agent_dir" ] || [ -z "$entry_file" ] || [ -z "$rule_path" ]; then
+      warn "invalid profile contract: $profile_file"
+      return 1
+    fi
+    printf '%s\t%s\t%s\t%s\n' "$name" "$agent_dir" "$entry_file" "$rule_path"
+    return
+  fi
+
+  case "$name" in
+    codex) printf '%s\n' $'codex\t.codex\tAGENTS.md\t.codex/rules/common/prompt-cache.md' ;;
+    claude) printf '%s\n' $'claude\t.claude\tCLAUDE.md\t.claude/rules/common/prompt-cache.md' ;;
+    generic) printf '%s\n' $'generic\t.agent\tAGENTS.md\t.agent/rules/common/prompt-cache.md' ;;
+    *)
+      warn "unknown profile: $name (profiles directory unavailable: ${PROFILE_ROOT:-none})"
+      return 1
+      ;;
+  esac
+}
+
+selected_profile_specs() {
+  local profile_file name
+  case "$PLATFORM" in
+    none)
+      return
+      ;;
+    both)
+      emit_profile_spec codex
+      emit_profile_spec claude
+      ;;
+    all)
+      if [ -z "$PROFILE_ROOT" ] || [ ! -d "$PROFILE_ROOT" ]; then
+        warn "--platform all requires this repository's profiles directory"
+        return 1
+      fi
+      for profile_file in "$PROFILE_ROOT"/*.yaml; do
+        [ -f "$profile_file" ] || continue
+        name="$(profile_value "$profile_file" name)"
+        emit_profile_spec "${name:-$(basename "${profile_file%.yaml}")}"
+      done
+      ;;
+    *)
+      emit_profile_spec "$PLATFORM"
+      ;;
+  esac
 }
 
 while [ "$#" -gt 0 ]; do
@@ -49,7 +124,7 @@ while [ "$#" -gt 0 ]; do
       ;;
     --platform)
       if [ "$#" -lt 2 ]; then
-        warn "--platform requires codex, claude, both, or none"
+        warn "--platform requires a profile name, both, all, or none"
         exit 2
       fi
       PLATFORM="$2"
@@ -84,13 +159,9 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
-case "$PLATFORM" in
-  codex|claude|both|none) ;;
-  *)
-    warn "platform must be codex, claude, both, or none"
-    exit 2
-    ;;
-esac
+if ! selected_profile_specs >/dev/null; then
+  exit 2
+fi
 
 if [ ! -d "$TARGET_DIR" ]; then
   warn "target directory not found: $TARGET_DIR"
@@ -98,11 +169,6 @@ if [ ! -d "$TARGET_DIR" ]; then
 fi
 
 TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
-
-platform_enabled() {
-  local name="$1"
-  [ "$PLATFORM" = "both" ] || [ "$PLATFORM" = "$name" ]
-}
 
 target_path() {
   case "$1" in
@@ -175,15 +241,16 @@ RULES
 }
 
 entry_block() {
-  local rule_path="$1"
+  local name="$1"
+  local rule_path="$2"
   cat <<RULES
-<!-- prompt-cache-bootstrap:begin -->
+<!-- prompt-cache-bootstrap:${name}:begin -->
 ## Prompt Cache
 
 - Follow \`$rule_path\` for high-frequency prompt design.
 - Keep stable instructions and output formats before dynamic user input, file excerpts, dates, IDs, and runtime state.
 - Reuse canonical templates and load long context only when needed.
-<!-- prompt-cache-bootstrap:end -->
+<!-- prompt-cache-bootstrap:${name}:end -->
 RULES
 }
 
@@ -194,6 +261,8 @@ install_rule() {
   local relative_rule_path="$4"
   local rule_file
   local entry_path
+  local start_marker="<!-- prompt-cache-bootstrap:${name}:begin -->"
+  local legacy_marker="<!-- prompt-cache-bootstrap:begin -->"
 
   rule_file="$(target_path "$rule_path")"
   entry_path="$(target_path "$entry_file")"
@@ -206,8 +275,12 @@ install_rule() {
     log "kept existing $rule_file for $name"
   fi
 
-  if [ -f "$entry_path" ] && grep -qF '<!-- prompt-cache-bootstrap:begin -->' "$entry_path"; then
+  if [ -f "$entry_path" ] && grep -qF "$start_marker" "$entry_path"; then
     log "entry block already present in $entry_path"
+    return
+  fi
+  if { [ "$name" = "codex" ] || [ "$name" = "claude" ]; } && [ -f "$entry_path" ] && grep -qF "$legacy_marker" "$entry_path"; then
+    log "legacy entry block already present in $entry_path"
     return
   fi
 
@@ -217,7 +290,7 @@ install_rule() {
 
   {
     printf '\n'
-    entry_block "$relative_rule_path"
+    entry_block "$name" "$relative_rule_path"
   } >> "$entry_path"
   log "updated $entry_path"
 }
@@ -228,6 +301,8 @@ check_rule() {
   local entry_file="$3"
   local rule_file
   local entry_path
+  local start_marker="<!-- prompt-cache-bootstrap:${name}:begin -->"
+  local legacy_marker="<!-- prompt-cache-bootstrap:begin -->"
 
   rule_file="$(target_path "$rule_path")"
   entry_path="$(target_path "$entry_file")"
@@ -238,8 +313,10 @@ check_rule() {
     warn "missing $rule_file for $name"
   fi
 
-  if [ -f "$entry_path" ] && grep -qF '<!-- prompt-cache-bootstrap:begin -->' "$entry_path"; then
+  if [ -f "$entry_path" ] && grep -qF "$start_marker" "$entry_path"; then
     log "found cache entry block in $entry_path"
+  elif { [ "$name" = "codex" ] || [ "$name" = "claude" ]; } && [ -f "$entry_path" ] && grep -qF "$legacy_marker" "$entry_path"; then
+    log "found legacy cache entry block in $entry_path"
   else
     warn "missing cache entry block in $entry_path"
   fi
@@ -279,12 +356,10 @@ run_profiles() {
   local action="$1"
   local spec name agent_dir entry_file rule_path
 
-  if platform_enabled codex; then
-    run_profile "$action" "codex" ".codex" "AGENTS.md" ".codex/rules/common/prompt-cache.md"
-  fi
-  if platform_enabled claude; then
-    run_profile "$action" "claude" ".claude" "CLAUDE.md" ".claude/rules/common/prompt-cache.md"
-  fi
+  while IFS=$'\t' read -r name agent_dir entry_file rule_path; do
+    [ -n "${name:-}" ] || continue
+    run_profile "$action" "$name" "$agent_dir" "$entry_file" "$rule_path"
+  done < <(selected_profile_specs)
   if [ "${#CUSTOM_AGENTS[@]}" -gt 0 ]; then
     for spec in "${CUSTOM_AGENTS[@]}"; do
       IFS=$'\t' read -r name agent_dir entry_file rule_path <<EOF
@@ -302,12 +377,10 @@ scan_prompts() {
   local prompt_dirs=("$root/prompts")
   local spec name agent_dir entry_file rule_path
 
-  if platform_enabled codex; then
-    prompt_dirs+=("$root/.co""dex/prompts")
-  fi
-  if platform_enabled claude; then
-    prompt_dirs+=("$root/.claude/prompts")
-  fi
+  while IFS=$'\t' read -r name agent_dir entry_file rule_path; do
+    [ -n "${name:-}" ] || continue
+    prompt_dirs+=("$root/${agent_dir%/}/prompts")
+  done < <(selected_profile_specs)
   if [ "${#CUSTOM_AGENTS[@]}" -gt 0 ]; then
     for spec in "${CUSTOM_AGENTS[@]}"; do
       IFS=$'\t' read -r name agent_dir entry_file rule_path <<EOF

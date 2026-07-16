@@ -19,16 +19,19 @@ LEGACY_END_MARKER = "<!-- env-template:end -->"
 class EnvProfile:
     name: str
     agent_dir: str
+    skills_dir: str
+    rules_dir: str
+    scripts_dir: str
     entry_file: str
     template_profile: str
 
     @property
     def rule_path(self) -> str:
-        return f"{self.agent_dir}/rules/common/env.md"
+        return f"{self.rules_dir}/common/env.md"
 
     @property
     def script_path(self) -> str:
-        return f"{self.agent_dir}/scripts/check-env-template.sh"
+        return f"{self.scripts_dir}/check-env-template.sh"
 
 
 def parse_flat_yaml(path: Path) -> dict[str, str]:
@@ -48,18 +51,22 @@ def load_builtin_profiles() -> dict[str, EnvProfile]:
         values = parse_flat_yaml(path)
         name = values.get("name", path.stem)
         rules_dir = Path(values["rules_dir"])
+        agent_dir = values.get("agent_dir") or rules_dir.parent.as_posix()
         profiles[name] = EnvProfile(
             name=name,
-            agent_dir=rules_dir.parent.as_posix(),
+            agent_dir=agent_dir,
+            skills_dir=values.get("skills_dir") or f"{agent_dir}/skills",
+            rules_dir=rules_dir.as_posix(),
+            scripts_dir=values.get("scripts_dir") or f"{agent_dir}/scripts",
             entry_file=values["entry_file"],
             template_profile=values.get("env_template", name),
         )
     if profiles:
         return profiles
     return {
-        "codex": EnvProfile("codex", ".codex", "AGENTS.md", "codex"),
-        "claude": EnvProfile("claude", ".claude", "CLAUDE.md", "claude"),
-        "generic": EnvProfile("generic", ".agent", "AGENTS.md", "codex"),
+        "codex": EnvProfile("codex", ".codex", ".agents/skills", ".codex/rules", ".codex/scripts", "AGENTS.md", "codex"),
+        "claude": EnvProfile("claude", ".claude", ".claude/skills", ".claude/rules", ".claude/scripts", "CLAUDE.md", "claude"),
+        "generic": EnvProfile("generic", ".agent", ".agent/skills", ".agent/rules", ".agent/scripts", "AGENTS.md", "codex"),
     }
 
 
@@ -72,9 +79,14 @@ def load_profile_file(path: str | Path) -> EnvProfile:
     name = values.get("name", profile_path.stem)
     if "rules_dir" not in values:
         raise argparse.ArgumentTypeError(f"profile is missing rules_dir: {profile_path}")
+    rules_dir = Path(values["rules_dir"])
+    agent_dir = values.get("agent_dir") or rules_dir.parent.as_posix()
     return EnvProfile(
         name=name,
-        agent_dir=Path(values["rules_dir"]).parent.as_posix(),
+        agent_dir=agent_dir,
+        skills_dir=values.get("skills_dir") or f"{agent_dir}/skills",
+        rules_dir=rules_dir.as_posix(),
+        scripts_dir=values.get("scripts_dir") or f"{agent_dir}/scripts",
         entry_file=values.get("entry_file", "AGENTS.md"),
         template_profile=values.get("env_template", "codex"),
     )
@@ -103,8 +115,18 @@ def copy_file(source: Path, target: Path, overwrite: bool) -> bool:
 def transform_for_profile(text: str, profile: EnvProfile) -> str:
     if profile.template_profile == profile.name:
         return text
-    source = BUILTIN_PROFILES[profile.template_profile].agent_dir
-    return text.replace(source, profile.agent_dir)
+    source = BUILTIN_PROFILES[profile.template_profile]
+    replacements = (
+        (source.rule_path, profile.rule_path),
+        (source.script_path, profile.script_path),
+        (f"{source.agent_dir}/rules", profile.rules_dir),
+        (f"{source.agent_dir}/scripts", profile.scripts_dir),
+        (f"{source.agent_dir}/skills", profile.skills_dir),
+        (f"{source.agent_dir}/agents", f"{profile.agent_dir}/agents"),
+    )
+    for old, new in replacements:
+        text = text.replace(old, new)
+    return text
 
 
 def entry_markers(profile: EnvProfile) -> tuple[str, str]:
@@ -159,7 +181,16 @@ def parse_custom_agent(spec: str) -> EnvProfile:
     if not name or not agent_dir:
         raise argparse.ArgumentTypeError("custom agent name and directory are required")
     entry_file = rest[0] if rest and rest[0] else "AGENTS.md"
-    return EnvProfile(name=name, agent_dir=agent_dir.rstrip("/"), entry_file=entry_file, template_profile="codex")
+    agent_dir = agent_dir.rstrip("/")
+    return EnvProfile(
+        name=name,
+        agent_dir=agent_dir,
+        skills_dir=f"{agent_dir}/skills",
+        rules_dir=f"{agent_dir}/rules",
+        scripts_dir=f"{agent_dir}/scripts",
+        entry_file=entry_file,
+        template_profile="codex",
+    )
 
 
 def selected_profiles(args: argparse.Namespace) -> list[EnvProfile]:

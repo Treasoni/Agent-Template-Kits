@@ -10,6 +10,8 @@ profile-specific rule and check script into the matching target profile:
 
 The templates explain how an agent should generate, update, and audit
 `.env.example` without committing real secrets or machine-local absolute paths.
+All built-in profiles reuse the closest compatible rule template and write the
+result to the profile's declared `rules_dir` and `scripts_dir`.
 
 ## Install
 

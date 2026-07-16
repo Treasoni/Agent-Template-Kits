@@ -10,6 +10,7 @@
 | --- | --- | --- |
 | `skills_dir` | skill 模板安装目录 | `.agent/skills` |
 | `rules_dir` | agent 专属规则目录 | `.agent/rules` |
+| `scripts_dir` | 受管检查和辅助脚本目录 | `.agent/scripts` |
 | `hooks_dir` | agent hook 脚本目录 | `.agent/hooks` |
 | `entry_file` | 项目入口规则文件 | `AGENTS.md` |
 
@@ -18,6 +19,15 @@
 ```text
 codex   -> .agents/skills + .codex/rules + .codex/hooks + AGENTS.md
 claude  -> .claude/skills + .claude/rules + .claude/hooks + CLAUDE.md
+codebuddy -> .codebuddy/skills + .codebuddy/rules + .codebuddy/hooks + CODEBUDDY.md
+cursor  -> .cursor/skills + .cursor/rules + AGENTS.md
+gemini  -> .gemini/skills + .gemini/rules + GEMINI.md
+github-copilot -> .github/skills + .github/instructions + .github/copilot-instructions.md
+cline   -> .cline/skills + .clinerules + AGENTS.md
+roo-code -> .roo/skills + .roo/rules + AGENTS.md
+windsurf -> .windsurf/skills + .windsurf/rules + AGENTS.md
+opencode -> .opencode/skills + .opencode/rules + AGENTS.md
+qwen-code -> .qwen/skills + .qwen/rules + QWEN.md
 generic -> .agent/skills + .agent/rules + .agent/hooks + AGENTS.md
 ```
 
@@ -54,6 +64,8 @@ python3 templates/env/install.py --target . --profile-file /path/to/myagent.yaml
 - POSIX-compatible hooks should use `/usr/bin/env sh`.
 - Avoid macOS-only commands and BSD-only flags when a Python implementation is reasonable.
 - Native Windows agents should prefer Python hooks such as `read_learnings.py`; Bash scripts are expected to run in Linux, macOS, WSL, or Git Bash.
+- `scripts/install.py` is the cross-platform coordinator: it uses the running Python interpreter for Python components and searches `PATH` plus common Git for Windows locations for Bash when a selected component needs it.
+- CodeBuddy's `SessionStart` hook is installed as a Python command in `.codebuddy/settings.json`; on Windows, CodeBuddy itself executes hooks through Git Bash and the unified installer writes the active Python executable name rather than a Unix-only path.
 
 ## Adding A New Agent
 
@@ -69,7 +81,7 @@ python3 templates/env/install.py --target . --profile-file /path/to/myagent.yaml
 Useful validation commands:
 
 ```bash
-python3 -m py_compile templates/self-learning/install.py templates/self-learning/hooks/read_learnings.py
+python3 -m py_compile scripts/install.py templates/self-learning/install.py templates/self-learning/hooks/read_learnings.py
 python3 -m py_compile templates/env/install.py
 bash -n templates/cache/prompt-cache-bootstrap.sh skills/workflow-todo-state/scripts/install.sh
 bash templates/cache/prompt-cache-bootstrap.sh --check --platform none --agent generic,.agent,AGENTS.md --target /path/to/project

@@ -61,5 +61,5 @@ python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --root /path/t
 - 生成区会写入 `skill-registry:managed` 所有权标记；首次升级保留无法判定来源的旧条目，后续同步可准确删除已移除的本地 skill
 - 不修改手动维护部分（核心原则、Obsidian 说明、分析意图、匹配技能、错误处理）
 - 不创建或删除任何 SKILL.md 文件
-- 支持 `--profile codex|claude|generic`，也支持 `--skills-dir` 与 `--registry-file` 完全自定义路径
+- 支持 `--profile <name>` 读取 `profiles/*.yaml` 中的任意内置 profile，也支持 `--skills-dir` 与 `--registry-file` 完全自定义路径
 - 同步 `--dry-run` 预览变更，确认后再应用

@@ -23,6 +23,145 @@ def run(*args: str, cwd: Path = ROOT, check: bool = True) -> subprocess.Complete
 
 
 class RefactorRegressionTests(unittest.TestCase):
+    def test_mainstream_profiles_install_to_their_declared_layouts(self) -> None:
+        profiles = {
+            "codebuddy": (".codebuddy/skills", ".codebuddy/rules", ".codebuddy/scripts", "CODEBUDDY.md"),
+            "cursor": (".cursor/skills", ".cursor/rules", ".cursor/scripts", "AGENTS.md"),
+            "gemini": (".gemini/skills", ".gemini/rules", ".gemini/scripts", "GEMINI.md"),
+            "github-copilot": (".github/skills", ".github/instructions", ".github/scripts", ".github/copilot-instructions.md"),
+            "cline": (".cline/skills", ".clinerules", ".cline/scripts", "AGENTS.md"),
+            "roo-code": (".roo/skills", ".roo/rules", ".roo/scripts", "AGENTS.md"),
+            "windsurf": (".windsurf/skills", ".windsurf/rules", ".windsurf/scripts", "AGENTS.md"),
+            "opencode": (".opencode/skills", ".opencode/rules", ".opencode/scripts", "AGENTS.md"),
+            "qwen-code": (".qwen/skills", ".qwen/rules", ".qwen/scripts", "QWEN.md"),
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory)
+            for profile, (skills_dir, rules_dir, scripts_dir, entry_file) in profiles.items():
+                run(
+                    "python3",
+                    "templates/self-learning/install.py",
+                    "--target",
+                    str(target),
+                    "--profile",
+                    profile,
+                    "--no-hooks",
+                )
+                run(
+                    "python3",
+                    "templates/env/install.py",
+                    "--target",
+                    str(target),
+                    "--profile",
+                    profile,
+                    "--overwrite",
+                )
+                self.assertTrue((target / skills_dir / "digest" / "SKILL.md").is_file())
+                self.assertTrue((target / rules_dir / "common" / "env.md").is_file())
+                self.assertTrue((target / scripts_dir / "check-env-template.sh").is_file())
+                self.assertTrue((target / entry_file).is_file())
+
+    def test_unified_installer_detects_and_installs_codebuddy(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory)
+            (target / ".codebuddy").mkdir()
+            (target / "CODEBUDDY.md").write_text("# CodeBuddy\n", encoding="utf-8")
+
+            detection = run(
+                "python3",
+                "scripts/install.py",
+                "--target",
+                str(target),
+                "--detect",
+            )
+            self.assertIn("codebuddy", detection.stdout)
+            self.assertIn(".codebuddy", detection.stdout)
+
+            preview = run(
+                "python3",
+                "scripts/install.py",
+                "--target",
+                str(target),
+                "--profile",
+                "codebuddy",
+                "--components",
+                "self-learning,env",
+            )
+            self.assertIn("[DRY RUN]", preview.stdout)
+            self.assertFalse((target / ".learnings").exists())
+
+            run(
+                "python3",
+                "scripts/install.py",
+                "--target",
+                str(target),
+                "--use-detected",
+                "--apply",
+                "--yes",
+            )
+            self.assertTrue((target / ".codebuddy/skills/digest/SKILL.md").is_file())
+            self.assertTrue((target / ".codebuddy/rules/common/env.md").is_file())
+            self.assertTrue((target / ".codebuddy/rules/common/prompt-cache.md").is_file())
+            self.assertTrue((target / ".codebuddy/scripts/todo-state.sh").is_file())
+            self.assertTrue((target / ".codebuddy/rules/workflow-routing.md").is_file())
+            self.assertTrue((target / ".codebuddy/rules/common/skill-invocation.md").is_file())
+            settings = json.loads((target / ".codebuddy/settings.json").read_text(encoding="utf-8"))
+            commands = [
+                hook["command"]
+                for entry in settings["hooks"]["SessionStart"]
+                for hook in entry["hooks"]
+            ]
+            self.assertIn("python3 '.codebuddy/hooks/read_learnings.py'", commands)
+
+    def test_mainstream_profiles_are_available_to_registry_and_shell_installers(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory)
+            run(
+                "python3",
+                "templates/self-learning/install.py",
+                "--target",
+                str(target),
+                "--profile",
+                "github-copilot",
+                "--no-hooks",
+            )
+            run(
+                "python3",
+                "skills/sync-skill-registry/scripts/sync_skill_registry.py",
+                "--profile",
+                "github-copilot",
+                "--root",
+                str(target),
+                "--create",
+            )
+            self.assertTrue((target / ".github/instructions/common/skill-invocation.md").is_file())
+
+            run(
+                "bash",
+                "templates/cache/prompt-cache-bootstrap.sh",
+                "--apply",
+                "--platform",
+                "github-copilot",
+                "--target",
+                str(target),
+            )
+            self.assertTrue((target / ".github/instructions/common/prompt-cache.md").is_file())
+
+            run(
+                "bash",
+                "skills/workflow-todo-state/scripts/install.sh",
+                str(target),
+                "--profile",
+                "cline",
+                "--with-skill",
+                "--init-layout",
+                "--update-agents",
+            )
+            self.assertTrue((target / ".cline/skills/workflow-todo-state/SKILL.md").is_file())
+            self.assertTrue((target / ".clinerules/workflow-routing.md").is_file())
+            self.assertTrue((target / ".cline/scripts/sync-workflow-routing.sh").is_file())
+
     def test_self_learning_overwrite_preserves_records_and_custom_hooks(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory)

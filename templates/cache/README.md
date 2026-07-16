@@ -1,6 +1,6 @@
 # Prompt Cache Templates
 
-这组文件可直接复用到任意 agent 项目中。Codex 与 Claude Code 是内置 profile；其他 agent 可以通过 `--agent` 指定自己的目录和入口文件。
+这组文件可直接复用到任意 agent 项目中。所有 `profiles/*.yaml` 中的 Agent 都可用 `--platform <profile>` 直接安装；未知 agent 可以通过 `--agent` 指定自己的目录和入口文件。
 
 | 文件 | 用途 |
 | --- | --- |
@@ -23,10 +23,10 @@ bash templates/cache/prompt-cache-bootstrap.sh --check --platform both --target 
 bash templates/cache/prompt-cache-bootstrap.sh --apply --platform both --target /path/to/project
 ```
 
-安装通用 agent profile：
+安装内置 Generic profile：
 
 ```bash
-bash templates/cache/prompt-cache-bootstrap.sh --apply --platform none --agent generic,.agent,AGENTS.md --target /path/to/project
+bash templates/cache/prompt-cache-bootstrap.sh --apply --platform generic --target /path/to/project
 ```
 
 安装自定义 agent profile：
@@ -39,8 +39,7 @@ bash templates/cache/prompt-cache-bootstrap.sh --apply --platform none --agent m
 
 ## What The Script Changes
 
-- Codex profile：创建 `.codex/rules/common/prompt-cache.md`，并向 `AGENTS.md` 追加带标记的入口规则。
-- Claude profile：创建 `.claude/rules/common/prompt-cache.md`，并向 `CLAUDE.md` 追加带标记的入口规则。
+- Built-in profile：创建其声明的 `prompt_cache_rule`，并向入口文件追加 profile 专属标记的入口规则。
 - Custom profile：创建 `<agent_dir>/rules/common/prompt-cache.md`，并向 `<entry_file>` 追加带标记的入口规则。
 - 检查 `prompts/` 和所选 profile 的 `prompts/` 目录中可能放错位置的时间戳、UUID、git 状态等动态字段。
 

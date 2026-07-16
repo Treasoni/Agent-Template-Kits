@@ -20,6 +20,7 @@ require_command bash
 
 log "python syntax"
 python3 -m py_compile \
+  scripts/install.py \
   templates/self-learning/install.py \
   templates/self-learning/hooks/read_learnings.py \
   templates/self-learning/skills/maintain-learnings/scripts/sync_platform_skills.py \

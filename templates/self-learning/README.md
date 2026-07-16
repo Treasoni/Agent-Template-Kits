@@ -54,9 +54,18 @@ python3 templates/self-learning/install.py --target . --profile generic --no-hoo
 | --- | --- | --- | --- |
 | `codex` | `.agents/skills` | `.codex/hooks` | `AGENTS.md` |
 | `claude` | `.claude/skills` | `.claude/hooks` | `CLAUDE.md` |
+| `codebuddy` | `.codebuddy/skills` | `.codebuddy/hooks` | `CODEBUDDY.md` |
+| `cursor` | `.cursor/skills` | — | `AGENTS.md` |
+| `gemini` | `.gemini/skills` | — | `GEMINI.md` |
+| `github-copilot` | `.github/skills` | — | `.github/copilot-instructions.md` |
+| `cline` | `.cline/skills` | — | `AGENTS.md` |
+| `roo-code` | `.roo/skills` | — | `AGENTS.md` |
+| `windsurf` | `.windsurf/skills` | — | `AGENTS.md` |
+| `opencode` | `.opencode/skills` | — | `AGENTS.md` |
+| `qwen-code` | `.qwen/skills` | — | `QWEN.md` |
 | `generic` | `.agent/skills` | `.agent/hooks` | `AGENTS.md` |
 
-Generic/custom profile 不会生成未知 agent 的配置文件；安装器会复制 `read_learnings.py` 和 `read-learnings.sh`，并输出需要接入到该 agent hook 系统的命令。
+Codex、Claude Code 和 CodeBuddy profile 带有经过验证的 hook 配置模板。其他 profile 仍可安装 skills 和学习记录；如需 hook，请按该 Agent 的当前 hook 协议自行集成。
 
 `--overwrite` 只更新安装器管理的 skill 和 hook 脚本；已有 `.learnings/` 记录和无关 hook 配置始终保留。
 
