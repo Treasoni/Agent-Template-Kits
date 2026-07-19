@@ -5,6 +5,17 @@ description: Synchronize shared skills, rules, hooks, scripts, workflows, and MC
 
 # Multi-Agent Sync
 
+## Install The Runtime
+
+Install the portable synchronizer before using this skill in another project:
+
+```powershell
+py skills/multi-agent-sync/scripts/install.py <target-project> --dry-run
+py skills/multi-agent-sync/scripts/install.py <target-project> --apply
+```
+
+The installer creates `<target-project>/.agent-sync/` with the synchronizer, the three common profiles, and an empty MCP manifest. It never overwrites a different runtime file unless `--force` is supplied; it never overwrites an existing MCP manifest.
+
 Use `.agent-sync/agents/*.yaml` as the path registry. Read the relevant profile before changing shared Agent files. Exactly one profile must be the canonical source.
 
 ## Workflow
