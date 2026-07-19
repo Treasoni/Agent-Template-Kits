@@ -1,0 +1,4 @@
+interface:
+  display_name: "Multi-Agent Sync"
+  short_description: "Synchronize shared configuration across coding agents."
+  default_prompt: "Use $multi-agent-sync to synchronize this project's shared Agent configuration."

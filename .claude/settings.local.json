@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(if \\(Test-Path \"$env:USERPROFILE\\\\.ssh\"\\) { ls \"$env:USERPROFILE\\\\.ssh\" } else { Write-Host \".ssh 目录不存在\" })",
+      "PowerShell(Set-Location \"c:\\\\Users\\\\zhqzn\\\\Desktop\\\\Agent-Template-Kits-main\\\\Agent-Template-Kits-main\"; ssh-keyscan github.com >> \"$env:USERPROFILE\\\\.ssh\\\\known_hosts\" 2>$null)",
+      "PowerShell(ssh -o StrictHostKeyChecking=accept-new -T git@github.com 2>&1)"
+    ]
+  }
+}
