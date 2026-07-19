@@ -15,7 +15,7 @@ TEXT_SUFFIXES = {".md", ".py", ".sh", ".json", ".yaml", ".yml", ".txt"}
 PRIVATE_SKILL_PARTS = {"agents"}
 MCP_BEGIN = "# BEGIN agent-sync:mcp"
 MCP_END = "# END agent-sync:mcp"
-PATH_KEYS = {"skills", "rules", "hooks", "scripts", "workflows", "instructions", "mcp"}
+PATH_KEYS = {"skills", "rules", "hooks", "hook_config", "scripts", "workflows", "instructions", "mcp"}
 SCOPES = ("skills", "rules", "hooks", "scripts", "workflows", "mcp")
 
 

@@ -7,11 +7,14 @@ description: Synchronize shared skills, rules, hooks, scripts, workflows, and MC
 
 ## Install The Runtime
 
-Install the portable synchronizer before using this skill in another project:
+Install the portable synchronizer before using this skill in another project. Set
+`$skillDir` to the directory containing this skill; do not depend on a
+repository-specific `skills/` path.
 
 ```powershell
-py skills/multi-agent-sync/scripts/install.py <target-project> --dry-run
-py skills/multi-agent-sync/scripts/install.py <target-project> --apply
+$skillDir = "<path-to-this-skill>"
+py "$skillDir/scripts/install.py" <target-project> --dry-run
+py "$skillDir/scripts/install.py" <target-project> --apply
 ```
 
 The installer creates `<target-project>/.agent-sync/` with the synchronizer, the three common profiles, and an empty MCP manifest. It never overwrites a different runtime file unless `--force` is supplied; it never overwrites an existing MCP manifest.
@@ -41,13 +44,8 @@ Use `.agent-sync/agents/*.yaml` as the path registry. Read the relevant profile 
    py .agent-sync/sync_agents.py --apply --from claude --scope skills
    ```
 
-5. If a `SKILL.md` changed, refresh the skill registry after synchronization:
-
-   ```powershell
-   py .agents/skills/sync-skill-registry/scripts/sync_skill_registry.py --profile codex --root .
-   py .claude/skills/sync-skill-registry/scripts/sync_skill_registry.py --profile claude --root .
-   py .codebuddy/skills/sync-skill-registry/scripts/sync_skill_registry.py --profile codebuddy --root .
-   ```
+5. If a `SKILL.md` changed, refresh each target project's skill registry using
+   that project's own registry command, when it has one.
 
 ## Safety rules
 
