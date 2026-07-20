@@ -16,8 +16,8 @@ jobs:
       - name: Install validation dependency
         run: sudo apt-get update && sudo apt-get install -y ripgrep
       - name: Run project validation
-        run: scripts/validate.sh
+        run: bash scripts/validate.sh
       - name: Check environment template
-        run: .codex/scripts/check-env-template.sh --strict
+        run: bash .codex/scripts/check-env-template.sh --strict
       - name: Audit tracked files for secrets
-        run: skills/security-secret-audit/scripts/audit-secrets.sh
+        run: bash skills/security-secret-audit/scripts/audit-secrets.sh
