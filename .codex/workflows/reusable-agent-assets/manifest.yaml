@@ -2,7 +2,7 @@ apiVersion: agent-platform/v1
 kind: Workflow
 metadata:
   name: reusable-agent-assets
-  version: 0.1.0
+  version: 0.2.0
   description: "Route and package supplied agent materials into reusable project assets."
 spec:
   entrypoint: workflow.md

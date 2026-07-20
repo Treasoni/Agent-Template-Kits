@@ -8,6 +8,7 @@ _最后更新：2026-07-20_
 
 ## Agent 资产边界
 
+- **复用源优先**：用户明确“要复用、移植、跨项目共享”时，先创建或更新 canonical source（如 `skills/{skill-id}/`、`templates/`），再同步到 `.agents/skills` 等 runtime mirror；不得只交付 `.agents/` 或 `.claude/` 运行时目录。
 - **职责唯一**：`maintain-learnings` 只维护 `.learnings/`；跨 profile 的 skills、rules、hooks、scripts、workflows 与 MCP 同步只由 `multi-agent-sync` 实现。
 - **同步幂等**：涉及路径替换的同步器必须按路径长度从长到短替换，并以“`--apply` 后 `--check` 无漂移”作为回归条件。
 

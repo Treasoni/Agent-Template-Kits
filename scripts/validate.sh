@@ -25,6 +25,7 @@ python3 -m py_compile \
   templates/self-learning/hooks/read_learnings.py \
   templates/env/install.py \
   skills/sync-skill-registry/scripts/sync_skill_registry.py \
+  skills/manifest-platform/assets/platform/manifest-registry.py \
   scripts/check-docs.py \
   scripts/sync-runtime-skills.py \
   skills/multi-agent-sync/scripts/install.py \
@@ -36,6 +37,7 @@ bash -n \
   templates/cache/prompt-cache-bootstrap.sh \
   skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh \
   skills/security-secret-audit/scripts/audit-secrets.sh \
+  skills/manifest-platform/scripts/install.sh \
   skills/workflow-todo-state/scripts/install.sh \
   skills/workflow-todo-state/scripts/todo-state.sh \
   skills/workflow-todo-state/scripts/sync-workflow-routing.sh \
@@ -85,6 +87,13 @@ mkdir -p "$TMP_DIR/.agent/workflows/demo-flow"
 printf '%s\n' '# Demo' > "$TMP_DIR/.agent/workflows/demo-flow/workflow.md"
 bash "$TMP_DIR/.agent/scripts/sync-workflow-routing.sh" >/dev/null
 bash "$TMP_DIR/.agent/scripts/sync-workflow-routing.sh" --check >/dev/null
+
+log "manifest platform generic install"
+MANIFEST_TMP="$TMP_DIR/manifest-platform-target"
+mkdir -p "$MANIFEST_TMP"
+bash skills/manifest-platform/scripts/install.sh --target "$MANIFEST_TMP" --agent-dir .agent --validate >/dev/null
+test -x "$MANIFEST_TMP/.agent/platform/manifest-registry.py"
+test -f "$MANIFEST_TMP/.agent/platform/registry.yaml"
 
 log "skill registry generic dry-run/apply"
 python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --profile generic --root "$TMP_DIR" --create --with-skill --dry-run >/dev/null
