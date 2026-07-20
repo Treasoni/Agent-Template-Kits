@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Template Kits — 功能与使用文档</title>
+<style>
+  :root {
+    --bg-primary: #0d1117;
+    --bg-secondary: #161b22;
+    --bg-tertiary: #1c2128;
+    --bg-hover: #21262d;
+    --border-color: #30363d;
+    --text-primary: #e6edf3;
+    --text-secondary: #8b949e;
+    --text-muted: #6e7681;
+    --accent-blue: #58a6ff;
+    --accent-green: #3fb950;
+    --accent-orange: #d29922;
+    --accent-red: #f85149;
+    --accent-purple: #bc8cff;
+    --accent-teal: #39c5cf;
+    --code-bg: #1c2128;
+    --code-border: #30363d;
+    --sidebar-width: 280px;
+    --header-height: 60px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.7;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ===== Header ===== */
+  .header {
+    position: fixed; top: 0; left: 0; right: 0; height: var(--header-height);
+    background: rgba(13, 17, 23, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-color);
+    z-index: 100;
+    display: flex; align-items: center; padding: 0 24px;
+    justify-content: space-between;
+  }
+  .header-title {
+    font-size: 16px; font-weight: 600; color: var(--text-primary);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .header-title .logo {
+    width: 28px; height: 28px; border-radius: 6px;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: #fff;
+  }
+  .header-meta { font-size: 13px; color: var(--text-secondary); }
+  .header-meta .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 12px; font-weight: 500; margin-left: 8px;
+  }
+  .badge-version { background: rgba(88,166,255,0.15); color: var(--accent-blue); border: 1px solid rgba(88,166,255,0.3); }
+
+  /* ===== Sidebar ===== */
+  .sidebar {
+    position: fixed; top: var(--header-height); left: 0;
+    width: var(--sidebar-width); height: calc(100vh - var(--header-height));
+    background: var(--bg-secondary); border-right: 1px solid var(--border-color);
+    overflow-y: auto; padding: 20px 0;
+    z-index: 50;
+  }
+  .sidebar::-webkit-scrollbar { width: 6px; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+  .sidebar-section { margin-bottom: 8px; }
+  .sidebar-label {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.8px; color: var(--text-muted);
+    padding: 8px 24px 4px;
+  }
+  .sidebar a {
+    display: block; padding: 6px 24px;
+    font-size: 13.5px; color: var(--text-secondary);
+    text-decoration: none; transition: all 0.15s;
+    border-left: 3px solid transparent;
+  }
+  .sidebar a:hover { color: var(--text-primary); background: var(--bg-hover); }
+  .sidebar a.active {
+    color: var(--accent-blue); border-left-color: var(--accent-blue);
+    background: rgba(88,166,255,0.06);
+  }
+  .sidebar a.sub { padding-left: 40px; font-size: 13px; }
+
+  /* ===== Main Content ===== */
+  .main {
+    margin-left: var(--sidebar-width);
+    margin-top: var(--header-height);
+    padding: 40px 56px 80px;
+    max-width: 920px;
+  }
+
+  /* ===== Hero ===== */
+  .hero {
+    background: linear-gradient(135deg, rgba(88,166,255,0.08), rgba(188,140,255,0.06));
+    border: 1px solid var(--border-color);
+    border-radius: 16px; padding: 40px 36px; margin-bottom: 40px;
+  }
+  .hero h1 {
+    font-size: 28px; font-weight: 700; margin-bottom: 12px;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero p { font-size: 15px; color: var(--text-secondary); margin-bottom: 4px; }
+  .hero .hero-tags { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  .hero-tag {
+    padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;
+    background: var(--bg-tertiary); border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+  }
+
+  /* ===== Typography ===== */
+  h2 {
+    font-size: 22px; font-weight: 650; margin-top: 48px; margin-bottom: 20px;
+    padding-bottom: 10px; border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+  }
+  h3 {
+    font-size: 18px; font-weight: 600; margin-top: 32px; margin-bottom: 14px;
+    color: var(--text-primary);
+  }
+  h4 {
+    font-size: 15px; font-weight: 600; margin-top: 20px; margin-bottom: 10px;
+    color: var(--accent-blue);
+  }
+  p { margin-bottom: 14px; color: var(--text-primary); }
+  ul, ol { margin-bottom: 14px; padding-left: 24px; }
+  li { margin-bottom: 6px; color: var(--text-primary); }
+  li::marker { color: var(--text-muted); }
+  strong { color: var(--text-primary); font-weight: 600; }
+  a { color: var(--accent-blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  blockquote {
+    border-left: 3px solid var(--accent-blue);
+    background: rgba(88,166,255,0.06);
+    padding: 12px 18px; margin: 16px 0; border-radius: 0 8px 8px 0;
+    color: var(--text-secondary); font-size: 14px;
+  }
+  blockquote strong { color: var(--accent-blue); }
+  hr { border: none; border-top: 1px solid var(--border-color); margin: 40px 0; }
+
+  /* ===== Code ===== */
+  code {
+    font-family: "SF Mono", "Fira Code", "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 13px;
+    background: var(--bg-tertiary);
+    padding: 2px 6px; border-radius: 4px;
+    color: var(--accent-teal);
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 10px; padding: 18px 20px;
+    overflow-x: auto; margin: 16px 0;
+  }
+  pre::-webkit-scrollbar { height: 6px; }
+  pre::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+  pre code {
+    background: none; padding: 0; color: var(--text-primary);
+    font-size: 13px; line-height: 1.6;
+  }
+  /* Simple syntax highlight */
+  .tok-comment { color: var(--text-muted); font-style: italic; }
+  .tok-keyword { color: var(--accent-purple); }
+  .tok-string { color: var(--accent-teal); }
+  .tok-fn { color: var(--accent-blue); }
+  .tok-flag { color: var(--accent-orange); }
+  .tok-var { color: var(--accent-green); }
+  .tok-path { color: var(--text-secondary); }
+
+  /* ===== Tables ===== */
+  .table-wrapper { overflow-x: auto; margin: 16px 0; border-radius: 10px; border: 1px solid var(--border-color); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  thead { background: var(--bg-secondary); }
+  th {
+    padding: 10px 16px; text-align: left; font-weight: 600;
+    color: var(--text-secondary); border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+  }
+  td { padding: 10px 16px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--bg-hover); }
+  td code { font-size: 12.5px; }
+
+  /* ===== Cards ===== */
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin: 20px 0; }
+  .card {
+    background: var(--bg-secondary); border: 1px solid var(--border-color);
+    border-radius: 12px; padding: 20px; transition: all 0.2s;
+  }
+  .card:hover { border-color: var(--accent-blue); transform: translateY(-2px); }
+  .card-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; margin-bottom: 12px;
+  }
+  .card h4 { margin-top: 0; color: var(--text-primary); font-size: 15px; }
+  .card p { font-size: 13px; color: var(--text-secondary); margin-bottom: 0; }
+  .icon-blue { background: rgba(88,166,255,0.12); }
+  .icon-green { background: rgba(63,185,80,0.12); }
+  .icon-orange { background: rgba(210,153,34,0.12); }
+  .icon-purple { background: rgba(188,140,255,0.12); }
+  .icon-red { background: rgba(248,81,73,0.12); }
+  .icon-teal { background: rgba(57,197,207,0.12); }
+  .icon-blue .card-icon-inner { color: var(--accent-blue); }
+  .icon-green .card-icon-inner { color: var(--accent-green); }
+  .icon-orange .card-icon-inner { color: var(--accent-orange); }
+  .icon-purple .card-icon-inner { color: var(--accent-purple); }
+  .icon-red .card-icon-inner { color: var(--accent-red); }
+  .icon-teal .card-icon-inner { color: var(--accent-teal); }
+
+  /* ===== Callout ===== */
+  .callout {
+    border-radius: 10px; padding: 14px 18px; margin: 16px 0;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .callout-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .callout-body { font-size: 14px; color: var(--text-secondary); }
+  .callout-body strong { color: var(--text-primary); }
+  .callout-info { background: rgba(88,166,255,0.08); border: 1px solid rgba(88,166,255,0.2); }
+  .callout-info .callout-icon { color: var(--accent-blue); }
+  .callout-warn { background: rgba(210,153,34,0.08); border: 1px solid rgba(210,153,34,0.2); }
+  .callout-warn .callout-icon { color: var(--accent-orange); }
+  .callout-tip { background: rgba(63,185,80,0.08); border: 1px solid rgba(63,185,80,0.2); }
+  .callout-tip .callout-icon { color: var(--accent-green); }
+
+  /* ===== FAQ ===== */
+  .faq-item {
+    background: var(--bg-secondary); border: 1px solid var(--border-color);
+    border-radius: 10px; margin-bottom: 12px; overflow: hidden;
+  }
+  .faq-q {
+    padding: 14px 18px; font-weight: 600; font-size: 14px;
+    cursor: pointer; display: flex; justify-content: space-between;
+    align-items: center; color: var(--text-primary);
+    transition: background 0.15s;
+  }
+  .faq-q:hover { background: var(--bg-hover); }
+  .faq-q .arrow { color: var(--text-muted); transition: transform 0.2s; font-size: 12px; }
+  .faq-item.open .faq-q .arrow { transform: rotate(90deg); }
+  .faq-a {
+    max-height: 0; overflow: hidden; transition: max-height 0.3s ease;
+    padding: 0 18px;
+  }
+  .faq-item.open .faq-a { max-height: 400px; padding: 0 18px 14px; }
+  .faq-a p { font-size: 13.5px; color: var(--text-secondary); margin-bottom: 8px; }
+
+  /* ===== Steps ===== */
+  .steps { counter-reset: step; margin: 20px 0; }
+  .step {
+    position: relative; padding-left: 52px; margin-bottom: 24px;
+    counter-increment: step;
+  }
+  .step::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 0;
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    color: #fff; font-size: 15px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .step h4 { margin-top: 6px; }
+
+  /* ===== Profile badges ===== */
+  .profile-badges { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+  .profile-badge {
+    padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
+    background: var(--bg-tertiary); border: 1px solid var(--border-color);
+    color: var(--text-secondary); cursor: default; transition: all 0.15s;
+  }
+  .profile-badge:hover { color: var(--accent-blue); border-color: var(--accent-blue); }
+
+  /* ===== Tree ===== */
+  .tree {
+    background: var(--code-bg); border: 1px solid var(--code-border);
+    border-radius: 10px; padding: 18px 20px; margin: 16px 0;
+    font-family: "SF Mono", "Fira Code", monospace; font-size: 13px;
+    line-height: 1.7; color: var(--text-secondary); overflow-x: auto;
+  }
+  .tree .dir { color: var(--accent-blue); font-weight: 600; }
+  .tree .file { color: var(--text-secondary); }
+  .tree .comment { color: var(--text-muted); font-style: italic; }
+
+  /* ===== Footer ===== */
+  .footer {
+    margin-top: 60px; padding-top: 24px;
+    border-top: 1px solid var(--border-color);
+    font-size: 13px; color: var(--text-muted); text-align: center;
+  }
+  .footer a { color: var(--text-secondary); }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 900px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; padding: 24px 20px 60px; }
+    .card-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== Header ===== -->
+<div class="header">
+  <div class="header-title">
+    <div class="logo">AT</div>
+    <span>Agent Template Kits</span>
+  </div>
+  <div class="header-meta">
+    功能与使用文档
+    <span class="badge badge-version">v Unreleased</span>
+  </div>
+</div>
+
+<!-- ===== Sidebar ===== -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-section">
+    <div class="sidebar-label">概述</div>
+    <a href="#sec-1">1. 产品概述</a>
+    <a href="#sec-2">2. 核心功能</a>
+    <a href="#sec-3">3. 支持的 AI 编程助手</a>
+    <a href="#sec-4">4. 运行环境要求</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">上手</div>
+    <a href="#sec-5">5. 快速开始</a>
+    <a href="#sec-6">6. 统一安装器详解</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">功能模块</div>
+    <a href="#sec-7">7. 各功能模块详解</a>
+    <a href="#sec-7-1" class="sub">7.1 自学习系统</a>
+    <a href="#sec-7-2" class="sub">7.2 提示缓存优化</a>
+    <a href="#sec-7-3" class="sub">7.3 环境变量规范</a>
+    <a href="#sec-7-4" class="sub">7.4 可恢复 Workflow</a>
+    <a href="#sec-7-5" class="sub">7.5 技能注册表</a>
+    <a href="#sec-7-6" class="sub">7.6 密钥安全审计</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">进阶</div>
+    <a href="#sec-8">8. 自定义 Agent 接入</a>
+    <a href="#sec-9">9. 更新已安装的模板</a>
+    <a href="#sec-10">10. 安全与幂等性保障</a>
+    <a href="#sec-11">11. 验证与质量检查</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">参考</div>
+    <a href="#sec-12">12. 常见问题</a>
+    <a href="#sec-13">13. 目录结构参考</a>
+  </div>
+</nav>
+
+<!-- ===== Main ===== -->
+<main class="main">
+
+  <!-- Hero -->
+  <div class="hero">
+    <h1>Agent Template Kits</h1>
+    <p>一组可移植、可安装的 AI Agent 工程模板，包含自学习、提示缓存、环境变量规范、可恢复 Workflow、技能注册表和密钥审计。</p>
+    <p style="color: var(--text-muted); font-size: 13px; margin-top: 8px;">适用对象：需要在 AI 编程助手中引入工程化能力的开发团队</p>
+    <div class="hero-tags">
+      <span class="hero-tag">📦 可移植</span>
+      <span class="hero-tag">🔒 安全优先</span>
+      <span class="hero-tag">🔁 幂等可重复</span>
+      <span class="hero-tag">🌐 跨平台跨 Agent</span>
+      <span class="hero-tag">MIT License</span>
+    </div>
+  </div>
+
+  <!-- ===== 1. 产品概述 ===== -->
+  <h2 id="sec-1">1. 产品概述</h2>
+  <p>Agent Template Kits 是一组<strong>可移植、可安装</strong>的 AI Agent 工程模板。它不是需要部署的应用，而是一套"模板源"——你将它克隆到本地，然后通过安装器把所需能力写入你的目标项目。</p>
+
+  <h3>解决什么问题</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>痛点</th><th>本产品提供的方案</th></tr></thead>
+      <tbody>
+        <tr><td>AI 编程助手每次会话从零开始，不记住历史经验</td><td><strong>自学习系统</strong>：自动读取经验库，持续积累规则与纠错记录</td></tr>
+        <tr><td>提示词结构混乱，LLM 缓存命中率低，调用成本高</td><td><strong>提示缓存优化</strong>：规范提示布局，降低 token 消耗和延迟</td></tr>
+        <tr><td>环境变量管理混乱，容易泄露密钥</td><td><strong>环境变量规范</strong>：统一 <code>.env.example</code> 维护，自动检查缺失和可疑凭证</td></tr>
+        <tr><td>长任务中断后无法恢复，缺乏流程管控</td><td><strong>可恢复 Workflow</strong>：基于状态机的阶段管理，支持中断恢复</td></tr>
+        <tr><td>技能散落各处，无法统一管理</td><td><strong>技能注册表</strong>：自动扫描和同步所有 SKILL.md 元数据</td></tr>
+        <tr><td>提交代码前没有密钥安全检查</td><td><strong>密钥审计</strong>：扫描 Git 工作树中的 API Key、Token、密码和私钥</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>设计理念</h3>
+  <ul>
+    <li><strong>模板源而非应用</strong>：克隆后安装到目标项目，不改动目标项目已有结构</li>
+    <li><strong>安全优先</strong>：所有操作默认 dry-run 预览，确认后才执行</li>
+    <li><strong>幂等可重复</strong>：安装器可安全重复执行，不会覆盖已有定制内容</li>
+    <li><strong>跨平台跨 Agent</strong>：一套模板，适配 12 种主流 AI 编程助手</li>
+  </ul>
+
+  <!-- ===== 2. 核心功能 ===== -->
+  <h2 id="sec-2">2. 核心功能</h2>
+  <p>本产品包含 <strong>6 大功能模块</strong>，可单独安装，也可组合使用：</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-icon icon-blue"><span class="card-icon-inner">🧠</span></div>
+      <h4>自学习系统</h4>
+      <p>会话启动时自动加载历史经验，持续积累规则与纠错记录，支持多 Agent 同步守护。</p>
+    </div>
+    <div class="card">
+      <div class="card-icon icon-purple"><span class="card-icon-inner">⚡</span></div>
+      <h4>提示缓存优化</h4>
+      <p>审计并优化 LLM 缓存命中率、token 消耗、延迟与成本，提供可观测性和回归样本。</p>
+    </div>
+    <div class="card">
+      <div class="card-icon icon-green"><span class="card-icon-inner">🔑</span></div>
+      <h4>环境变量规范</h4>
+      <p>统一 <code>.env.example</code> 维护方式，自动检查缺失变量和可疑凭证。</p>
+    </div>
+    <div class="card">
+      <div class="card-icon icon-orange"><span class="card-icon-inner">📋</span></div>
+      <h4>可恢复 Workflow</h4>
+      <p>基于状态机的阶段管理，支持中断恢复、阶段跳过和阻塞标记。</p>
+    </div>
+    <div class="card">
+      <div class="card-icon icon-teal"><span class="card-icon-inner">📖</span></div>
+      <h4>技能注册表同步</h4>
+      <p>自动扫描 SKILL.md 元数据，智能比较并同步技能表格。</p>
+    </div>
+    <div class="card">
+      <div class="card-icon icon-red"><span class="card-icon-inner">🛡️</span></div>
+      <h4>密钥安全审计</h4>
+      <p>提交前扫描 Git 工作树中的暴露凭证，绝不输出凭证原文。</p>
+    </div>
+  </div>
+
+  <!-- ===== 3. 支持的 AI 编程助手 ===== -->
+  <h2 id="sec-3">3. 支持的 AI 编程助手</h2>
+  <p>本产品内置 <strong>12 种</strong> Agent Profile，覆盖主流 AI 编程助手：</p>
+
+  <div class="profile-badges">
+    <span class="profile-badge">codex</span>
+    <span class="profile-badge">claude</span>
+    <span class="profile-badge">codebuddy</span>
+    <span class="profile-badge">cursor</span>
+    <span class="profile-badge">gemini</span>
+    <span class="profile-badge">github-copilot</span>
+    <span class="profile-badge">cline</span>
+    <span class="profile-badge">roo-code</span>
+    <span class="profile-badge">windsurf</span>
+    <span class="profile-badge">opencode</span>
+    <span class="profile-badge">qwen-code</span>
+    <span class="profile-badge">generic</span>
+  </div>
+
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Profile</th><th>Skills 目录</th><th>Rules 目录</th><th>Hooks</th><th>入口文件</th></tr></thead>
+      <tbody>
+        <tr><td><code>codex</code></td><td><code>.agents/skills</code></td><td><code>.codex/rules</code></td><td><code>.codex/hooks</code></td><td><code>AGENTS.md</code></td></tr>
+        <tr><td><code>claude</code></td><td><code>.claude/skills</code></td><td><code>.claude/rules</code></td><td><code>.claude/hooks</code></td><td><code>CLAUDE.md</code></td></tr>
+        <tr><td><code>codebuddy</code></td><td><code>.codebuddy/skills</code></td><td><code>.codebuddy/rules</code></td><td><code>.codebuddy/hooks</code></td><td><code>CODEBUDDY.md</code></td></tr>
+        <tr><td><code>cursor</code></td><td><code>.cursor/skills</code></td><td><code>.cursor/rules</code></td><td>—</td><td><code>AGENTS.md</code></td></tr>
+        <tr><td><code>gemini</code></td><td><code>.gemini/skills</code></td><td><code>.gemini/rules</code></td><td>—</td><td><code>GEMINI.md</code></td></tr>
+        <tr><td><code>github-copilot</code></td><td><code>.github/skills</code></td><td><code>.github/instructions</code></td><td>—</td><td><code>.github/copilot-instructions.md</code></td></tr>
+        <tr><td><code>cline</code></td><td><code>.cline/skills</code></td><td><code>.clinerules</code></td><td>—</td><td><code>AGENTS.md</code></td></tr>
+        <tr><td><code>roo-code</code></td><td><code>.roo/skills</code></td><td><code>.roo/rules</code></td><td>—</td><td><code>AGENTS.md</code></td></tr>
+        <tr><td><code>windsurf</code></td><td><code>.windsurf/skills</code></td><td><code>.windsurf/rules</code></td><td>—</td><td><code>AGENTS.md</code></td></tr>
+        <tr><td><code>opencode</code></td><td><code>.opencode/skills</code></td><td><code>.opencode/rules</code></td><td>—</td><td><code>AGENTS.md</code></td></tr>
+        <tr><td><code>qwen-code</code></td><td><code>.qwen/skills</code></td><td><code>.qwen/rules</code></td><td>—</td><td><code>QWEN.md</code></td></tr>
+        <tr><td><code>generic</code></td><td><code>.agent/skills</code></td><td><code>.agent/rules</code></td><td><code>.agent/hooks</code></td><td><code>AGENTS.md</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>未在列表中的 Agent 可使用 <code>generic</code> profile，或按<a href="#sec-8">第 8 节</a>创建自定义 Profile。</p>
+
+  <!-- ===== 4. 运行环境要求 ===== -->
+  <h2 id="sec-4">4. 运行环境要求</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>工具</th><th>用途</th><th>要求</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Git</strong></td><td>克隆模板、密钥审计</td><td>建议安装</td></tr>
+        <tr><td><strong>Python 3</strong></td><td>安装器、hooks、注册表</td><td>必需</td></tr>
+        <tr><td><strong>Bash</strong></td><td>Shell 安装器和检查脚本</td><td>Linux、macOS、WSL 或 Git Bash</td></tr>
+        <tr><td><strong>ripgrep (<code>rg</code>)</strong></td><td>严格 env 检查</td><td>使用 env 检查时必需</td></tr>
+        <tr><td><strong>Perl</strong></td><td>workflow 状态和密钥检测</td><td>使用对应组件时必需</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout callout-warn">
+    <span class="callout-icon">⚠️</span>
+    <div class="callout-body"><strong>Windows 用户：</strong>Python 脚本可直接运行。Bash 脚本需要安装 Git for Windows（提供 Git Bash）或使用 WSL。统一安装器会自动查找系统 Bash 和常见 Git Bash 安装路径。</div>
+  </div>
+
+  <!-- ===== 5. 快速开始 ===== -->
+  <h2 id="sec-5">5. 快速开始</h2>
+
+  <div class="steps">
+    <div class="step">
+      <h4>获取模板</h4>
+      <pre><code><span class="tok-keyword">git</span> clone https://github.com/Treasoni/Agent-Template-Kits.git
+<span class="tok-keyword">cd</span> Agent-Template-Kits</code></pre>
+    </div>
+    <div class="step">
+      <h4>指定目标项目</h4>
+      <pre><code><span class="tok-comment"># 你的目标项目目录（必须已存在）</span>
+<span class="tok-keyword">export</span> <span class="tok-var">TARGET</span>=/absolute/path/to/your-project
+<span class="tok-keyword">test</span> -d <span class="tok-string">"$TARGET"</span></code></pre>
+    </div>
+    <div class="step">
+      <h4>自动检测并安装</h4>
+      <pre><code><span class="tok-comment"># 1. 只检测，不修改目标项目</span>
+<span class="tok-keyword">python3</span> scripts/install.py <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--detect</span>
+
+<span class="tok-comment"># 2. 预览安装计划（仍不写入）</span>
+<span class="tok-keyword">python3</span> scripts/install.py <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--use-detected</span>
+
+<span class="tok-comment"># 3. 确认后执行安装</span>
+<span class="tok-keyword">python3</span> scripts/install.py \
+  <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span> \
+  <span class="tok-flag">--use-detected</span> \
+  <span class="tok-flag">--apply</span> <span class="tok-flag">--yes</span></code></pre>
+    </div>
+  </div>
+
+  <div class="callout callout-tip">
+    <span class="callout-icon">✅</span>
+    <div class="callout-body">安装完成后，建议检查目标项目的 <code>git diff</code>，确认变更内容后再提交。</div>
+  </div>
+
+  <!-- ===== 6. 统一安装器详解 ===== -->
+  <h2 id="sec-6">6. 统一安装器详解</h2>
+  <p>统一安装器（<code>scripts/install.py</code>）是跨平台的协调入口。</p>
+
+  <h3>可选组件</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>组件名称</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><code>self-learning</code></td><td>自学习系统（skills + hooks + 学习记录）</td></tr>
+        <tr><td><code>env</code></td><td>环境变量规则和检查脚本</td></tr>
+        <tr><td><code>prompt-cache</code></td><td>提示缓存 skill 和规则</td></tr>
+        <tr><td><code>workflow</code></td><td>可恢复 workflow、routing 规则和状态脚本</td></tr>
+        <tr><td><code>registry</code></td><td>技能注册表</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>默认全部安装。可通过 <code>--components</code> 按需选择：</p>
+  <pre><code><span class="tok-keyword">python3</span> scripts/install.py \
+  <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span> \
+  <span class="tok-flag">--use-detected</span> \
+  <span class="tok-flag">--components</span> self-learning,env,registry \
+  <span class="tok-flag">--apply</span> <span class="tok-flag">--yes</span></code></pre>
+
+  <h3>关键参数</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>参数</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><code>--target &lt;path&gt;</code></td><td>目标项目路径（必须已存在）</td></tr>
+        <tr><td><code>--detect</code></td><td>只检测，不修改</td></tr>
+        <tr><td><code>--use-detected</code></td><td>采用所有检测到的 Profile</td></tr>
+        <tr><td><code>--profile &lt;name&gt;</code></td><td>手动指定 Profile</td></tr>
+        <tr><td><code>--components &lt;list&gt;</code></td><td>按需选择组件</td></tr>
+        <tr><td><code>--apply</code></td><td>执行安装（否则只预览）</td></tr>
+        <tr><td><code>--yes</code></td><td>非交互环境跳过确认</td></tr>
+        <tr><td><code>--overwrite</code></td><td>覆盖已有受管内容（需显式给出）</td></tr>
+        <tr><td><code>--force-workflow</code></td><td>强制覆盖不同的 workflow 文件（需显式给出）</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ===== 7. 各功能模块详解 ===== -->
+  <h2 id="sec-7">7. 各功能模块详解</h2>
+
+  <h3 id="sec-7-1">7.1 自学习系统（Self-Learning）</h3>
+  <pre><code><span class="tok-keyword">python3</span> templates/self-learning/install.py <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--profile</span> codex</code></pre>
+  <p><strong>安装内容：</strong></p>
+  <ul>
+    <li><code>digest</code> 和 <code>maintain-learnings</code> skills</li>
+    <li><code>.learnings/RULES.md</code>、<code>ERRORS.md</code>、<code>LEARNINGS.md</code></li>
+    <li>会话开始读取经验库的 hook 脚本</li>
+    <li>对应 Agent 的 hook 配置（保留既有无关 hooks）</li>
+  </ul>
+  <pre><code><span class="tok-comment"># 如不需要 hooks</span>
+<span class="tok-keyword">python3</span> templates/self-learning/install.py <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--profile</span> codex <span class="tok-flag">--no-hooks</span></code></pre>
+
+  <h3 id="sec-7-2">7.2 提示缓存优化（Prompt Cache Optimizer）</h3>
+  <h4>完整版（推荐）——安装 skill 和规则</h4>
+  <pre><code><span class="tok-keyword">bash</span> skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh \
+  <span class="tok-flag">--apply</span> <span class="tok-flag">--platform</span> codex <span class="tok-flag">--with-skill</span> <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span></code></pre>
+  <h4>精简版——只安装规则和入口文件引用</h4>
+  <pre><code><span class="tok-keyword">bash</span> templates/cache/prompt-cache-bootstrap.sh \
+  <span class="tok-flag">--apply</span> <span class="tok-flag">--platform</span> codex <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span></code></pre>
+  <h4>审计现有配置（只读检查）</h4>
+  <pre><code><span class="tok-keyword">bash</span> templates/cache/prompt-cache-bootstrap.sh \
+  <span class="tok-flag">--check</span> <span class="tok-flag">--platform</span> codex <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span></code></pre>
+  <div class="callout callout-info">
+    <span class="callout-icon">ℹ️</span>
+    <div class="callout-body"><strong>可观测性（<code>--with-observability</code>）：</strong>仅当 Agent 已接通自动 LLM usage 采集时使用。它会安装 <code>/.llm/prompt-cache/</code> 的 schema 和回归样本。直接使用 Codex 时不要加此选项。</div>
+  </div>
+
+  <h3 id="sec-7-3">7.3 环境变量规范（Env Template）</h3>
+  <pre><code><span class="tok-keyword">python3</span> templates/env/install.py <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--profile</span> codex</code></pre>
+  <p><strong>安装后检查：</strong></p>
+  <pre><code><span class="tok-keyword">cd</span> <span class="tok-string">"$TARGET"</span>
+
+<span class="tok-comment"># 默认模式：检查缺失变量和可疑凭证</span>
+.codex/scripts/check-env-template.sh
+
+<span class="tok-comment"># 严格模式：未被代码引用的模板变量也视为失败</span>
+.codex/scripts/check-env-template.sh <span class="tok-flag">--strict</span></code></pre>
+  <blockquote>检查脚本不会自动创建 <code>.env.example</code>，目标项目需先准备自己的最小环境变量模板。</blockquote>
+
+  <h3 id="sec-7-4">7.4 可恢复 Workflow（Workflow Todo State）</h3>
+  <pre><code><span class="tok-keyword">bash</span> skills/workflow-todo-state/scripts/install.sh \
+  <span class="tok-string">"$TARGET"</span> \
+  <span class="tok-flag">--profile</span> codex \
+  <span class="tok-flag">--with-skill</span> \
+  <span class="tok-flag">--init-layout</span> \
+  <span class="tok-flag">--update-agents</span></code></pre>
+  <p><strong>安装后使用流程：</strong></p>
+  <ol>
+    <li>在 <code>.codex/workflows/&lt;workflow-id&gt;/</code> 创建 <code>workflow.md</code>、<code>state-template.md</code> 和 <code>routing.yaml</code></li>
+    <li>运行 <code>.codex/scripts/sync-workflow-routing.sh</code> 生成路由注册表</li>
+    <li>从 state template 创建 <code>workspace/workflow-runs/&lt;task&gt;.workflow.md</code></li>
+    <li>通过 <code>todo-state.sh</code> 更新阶段状态：</li>
+  </ol>
+  <pre><code><span class="tok-comment"># 开始阶段</span>
+.codex/scripts/todo-state.sh <span class="tok-string">"${WORKFLOW_STATE_FILE}"</span> start P1
+
+<span class="tok-comment"># 完成阶段</span>
+.codex/scripts/todo-state.sh <span class="tok-string">"${WORKFLOW_STATE_FILE}"</span> complete P1
+
+<span class="tok-comment"># 跳过阶段</span>
+.codex/scripts/todo-state.sh <span class="tok-string">"${WORKFLOW_STATE_FILE}"</span> skip P2 <span class="tok-string">"not needed"</span>
+
+<span class="tok-comment"># 阻塞阶段</span>
+.codex/scripts/todo-state.sh <span class="tok-string">"${WORKFLOW_STATE_FILE}"</span> block P3 <span class="tok-string">"waiting for user input"</span></code></pre>
+  <p><strong>阶段状态流转规则：</strong></p>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>操作</th><th>前置条件</th></tr></thead>
+      <tbody>
+        <tr><td><code>start PN</code></td><td>前序阶段全部为"已完成"或"跳过"</td></tr>
+        <tr><td><code>complete PN</code></td><td>当前阶段为"进行中"</td></tr>
+        <tr><td><code>skip PN</code></td><td>拒绝已完成阶段，记录跳过原因</td></tr>
+        <tr><td><code>block PN</code></td><td>标记为阻塞，记录原因</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="sec-7-5">7.5 技能注册表同步（Skill Registry）</h3>
+  <pre><code><span class="tok-comment"># 预览（不写文件）</span>
+<span class="tok-keyword">python3</span> skills/sync-skill-registry/scripts/sync_skill_registry.py \
+  <span class="tok-flag">--profile</span> codex <span class="tok-flag">--root</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--create</span> <span class="tok-flag">--with-skill</span> <span class="tok-flag">--dry-run</span>
+
+<span class="tok-comment"># 应用</span>
+<span class="tok-keyword">python3</span> skills/sync-skill-registry/scripts/sync_skill_registry.py \
+  <span class="tok-flag">--profile</span> codex <span class="tok-flag">--root</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--create</span> <span class="tok-flag">--with-skill</span></code></pre>
+  <p><strong>工作原理：</strong>扫描 <code>*/SKILL.md</code> frontmatter → 读取现有表格 → 比较（新增/更新/删除/保留）→ 按分类重新生成并写入。</p>
+
+  <h3 id="sec-7-6">7.6 密钥安全审计（Security Secret Audit）</h3>
+  <pre><code><span class="tok-var">AUDITOR</span>=<span class="tok-string">"$PWD/skills/security-secret-audit/scripts/audit-secrets.sh"</span>
+
+<span class="tok-comment"># 扫描当前已跟踪和未忽略文件</span>
+(<span class="tok-keyword">cd</span> <span class="tok-string">"$TARGET"</span> && <span class="tok-string">"$AUDITOR"</span>)
+
+<span class="tok-comment"># 提交前只扫描 staged 内容</span>
+(<span class="tok-keyword">cd</span> <span class="tok-string">"$TARGET"</span> && <span class="tok-string">"$AUDITOR"</span> <span class="tok-flag">--staged</span>)
+
+<span class="tok-comment"># 泄露排查：包含 Git 历史</span>
+(<span class="tok-keyword">cd</span> <span class="tok-string">"$TARGET"</span> && <span class="tok-string">"$AUDITOR"</span> <span class="tok-flag">--all</span>)</code></pre>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>退出码</th><th>含义</th></tr></thead>
+      <tbody>
+        <tr><td><code>0</code></td><td>无发现，安全</td></tr>
+        <tr><td><code>2</code></td><td>发现潜在凭证，应阻止提交</td></tr>
+        <tr><td><code>1</code></td><td>扫描器错误，需排查</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ===== 8. 自定义 Agent 接入 ===== -->
+  <h2 id="sec-8">8. 自定义 Agent 接入</h2>
+
+  <h3>方式一：创建 YAML Profile（推荐）</h3>
+  <pre><code><span class="tok-keyword">name:</span> myagent
+<span class="tok-keyword">agent_dir:</span> .my-agent
+<span class="tok-keyword">skills_dir:</span> .my-agent/skills
+<span class="tok-keyword">rules_dir:</span> .my-agent/rules
+<span class="tok-keyword">scripts_dir:</span> .my-agent/scripts
+<span class="tok-keyword">hooks_dir:</span> .my-agent/hooks
+<span class="tok-keyword">entry_file:</span> INSTRUCTIONS.md
+<span class="tok-keyword">hook_config:</span> <span class="tok-string">""</span>
+<span class="tok-keyword">hook_template:</span> <span class="tok-string">""</span>
+<span class="tok-keyword">include_openai_yaml:</span> <span class="tok-keyword">false</span>
+<span class="tok-keyword">env_template:</span> codex</code></pre>
+  <pre><code><span class="tok-keyword">python3</span> templates/self-learning/install.py <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--profile-file</span> /path/to/myagent.yaml
+<span class="tok-keyword">python3</span> templates/env/install.py <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--profile-file</span> /path/to/myagent.yaml</code></pre>
+
+  <h3>方式二：使用命令行参数</h3>
+  <pre><code><span class="tok-comment"># 自学习</span>
+<span class="tok-keyword">python3</span> templates/self-learning/install.py \
+  <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--custom-agent</span> myagent:.my-agent/skills:.my-agent/hooks
+
+<span class="tok-comment"># 提示缓存</span>
+<span class="tok-keyword">bash</span> skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh \
+  <span class="tok-flag">--apply</span> <span class="tok-flag">--platform</span> none \
+  <span class="tok-flag">--agent</span> myagent,.my-agent,INSTRUCTIONS.md \
+  <span class="tok-flag">--with-skill</span> <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span>
+
+<span class="tok-comment"># Workflow</span>
+<span class="tok-keyword">bash</span> skills/workflow-todo-state/scripts/install.sh \
+  <span class="tok-string">"$TARGET"</span> \
+  <span class="tok-flag">--agent-dir</span> .my-agent \
+  <span class="tok-flag">--skills-dir</span> .my-agent/skills \
+  <span class="tok-flag">--entry-file</span> INSTRUCTIONS.md \
+  <span class="tok-flag">--with-skill</span> <span class="tok-flag">--init-layout</span> <span class="tok-flag">--update-agents</span></code></pre>
+
+  <!-- ===== 9. 更新 ===== -->
+  <h2 id="sec-9">9. 更新已安装的模板</h2>
+  <pre><code><span class="tok-comment"># 1. 更新本模板仓库</span>
+<span class="tok-keyword">git</span> pull --ff-only
+
+<span class="tok-comment"># 2. 重新运行安装器（加 --overwrite 更新受管内容）</span>
+<span class="tok-keyword">python3</span> templates/self-learning/install.py <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--profile</span> codex <span class="tok-flag">--overwrite</span>
+<span class="tok-keyword">python3</span> templates/env/install.py <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--profile</span> codex <span class="tok-flag">--overwrite</span>
+
+<span class="tok-comment"># 3. Workflow 安装器可重复执行</span>
+<span class="tok-keyword">bash</span> skills/workflow-todo-state/scripts/install.sh \
+  <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--profile</span> codex <span class="tok-flag">--with-skill</span> <span class="tok-flag">--init-layout</span> <span class="tok-flag">--update-agents</span></code></pre>
+  <div class="callout callout-info">
+    <span class="callout-icon">ℹ️</span>
+    <div class="callout-body">
+      <strong>更新安全说明：</strong>
+      <ul style="margin-bottom:0; margin-top:8px;">
+        <li>self-learning 的 <code>--overwrite</code> 不覆盖 <code>.learnings/</code>，也不删除无关 hook 配置</li>
+        <li>env 的 <code>--overwrite</code> 替换受管规则和脚本，但入口文件只更新标记区块</li>
+        <li>workflow 源码升级且目标文件不同时，需显式 <code>--force</code>；旧文件自动备份到 <code>.bak.*</code></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ===== 10. 安全与幂等性 ===== -->
+  <h2 id="sec-10">10. 安全与幂等性保障</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>保障项</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><strong>默认 dry-run</strong></td><td>首次操作优先使用 <code>--dry-run</code> 或 <code>--check</code></td></tr>
+        <tr><td><strong>不覆盖学习记录</strong></td><td><code>--overwrite</code> 不覆盖 <code>.learnings/</code></td></tr>
+        <tr><td><strong>保留无关 hooks</strong></td><td>self-learning 的 <code>--overwrite</code> 不删除无关 hook 配置</td></tr>
+        <tr><td><strong>入口文件安全</strong></td><td>env 的 <code>--overwrite</code> 只更新标记区块</td></tr>
+        <tr><td><strong>Workflow 可重复</strong></td><td>安装器可重复执行；内容不同时需显式 <code>--force</code></td></tr>
+        <tr><td><strong>注册表精确管理</strong></td><td>只删除上次同步标记为受管但已不存在的 skill</td></tr>
+        <tr><td><strong>密钥不泄露</strong></td><td>审计报告只含文件、行号和规则名</td></tr>
+        <tr><td><strong>显式覆盖</strong></td><td><code>--overwrite</code> 和 <code>--force-workflow</code> 必须由用户明确指定</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ===== 11. 验证 ===== -->
+  <h2 id="sec-11">11. 验证与质量检查</h2>
+  <h3>模板仓库自检</h3>
+  <pre><code>scripts/validate.sh
+.codex/scripts/check-env-template.sh <span class="tok-flag">--strict</span>
+.codex/scripts/sync-workflow-routing.sh <span class="tok-flag">--check</span>
+skills/security-secret-audit/scripts/audit-secrets.sh
+<span class="tok-keyword">git</span> diff <span class="tok-flag">--check</span></code></pre>
+  <p><code>scripts/validate.sh</code> 包含语法检查、临时目录安装 smoke test 和 <code>tests/</code> 回归测试。</p>
+
+  <h3>目标项目验证</h3>
+  <pre><code><span class="tok-keyword">cd</span> <span class="tok-string">"$TARGET"</span>
+
+<span class="tok-comment"># 验证 env 安装（如有 .env.example）</span>
+.codex/scripts/check-env-template.sh <span class="tok-flag">--strict</span>
+
+<span class="tok-comment"># 验证 workflow 路由注册表</span>
+.codex/scripts/sync-workflow-routing.sh <span class="tok-flag">--check</span></code></pre>
+  <blockquote>Claude Code 对应路径为 <code>.claude/scripts/</code>，generic profile 对应路径为 <code>.agent/scripts/</code>。</blockquote>
+
+  <!-- ===== 12. FAQ ===== -->
+  <h2 id="sec-12">12. 常见问题</h2>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">安装器会修改我的项目代码吗？<span class="arrow">▶</span></div>
+    <div class="faq-a"><p>不会。安装器只写入 agent 配置目录（如 <code>.codex/</code>、<code>.claude/</code>）、skills 目录、学习记录目录和入口规则文件的标记区块。不会改动业务代码。建议安装后先检查 <code>git diff</code> 再提交。</p></div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">我的项目已经有 hook 配置，安装会覆盖吗？<span class="arrow">▶</span></div>
+    <div class="faq-a"><p>不会。self-learning 的安装器会合并 hook 配置，保留既有的无关设置。<code>--overwrite</code> 也只更新受管的 skill 和 hook 脚本。</p></div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">Windows 上可以使用吗？<span class="arrow">▶</span></div>
+    <div class="faq-a"><p>可以。Python 脚本可直接在 Windows 上运行。Bash 脚本需要 Git Bash 或 WSL。统一安装器会自动查找系统 Bash 和常见 Git for Windows 路径；找不到时会明确提示，不会写入目标项目。</p></div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">提示缓存的可观测性什么时候用？<span class="arrow">▶</span></div>
+    <div class="faq-a"><p>仅当你的 Agent 已接通能自动记录 provider usage 的 API 调用后使用 <code>--with-observability</code>。直接使用 Codex 而没有项目 API 的场景，不要加此选项，也无需手填 token 或费用。</p></div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">密钥审计能检测哪些类型的凭证？<span class="arrow">▶</span></div>
+    <div class="faq-a"><p>支持检测：Provider 特定格式的 API Key、Token、密码、私钥、JWT 等。高置信度模式扫描所有文本文件；低置信度变量名检查限制在配置类文件中，避免生成代码噪声。报告绝不输出凭证原文。</p></div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">安装后如何卸载？<span class="arrow">▶</span></div>
+    <div class="faq-a"><p>本产品没有专门的卸载器。删除安装时创建的目录和文件即可（如 <code>.codex/skills/</code>、<code>.learnings/</code> 等）。建议在安装前用 <code>--dry-run</code> 预览所有变更，记录将创建的文件列表。</p></div>
+  </div>
+
+  <!-- ===== 13. 目录结构 ===== -->
+  <h2 id="sec-13">13. 目录结构参考</h2>
+
+  <h3>安装后的目标项目（以 Codex 为例）</h3>
+  <div class="tree">
+<span class="dir">your-project/</span>
+├── <span class="dir">.agents/skills/</span>
+│   ├── <span class="dir">digest/</span>
+│   ├── <span class="dir">maintain-learnings/</span>
+│   ├── <span class="dir">prompt-cache-optimizer/</span>
+│   ├── <span class="dir">sync-skill-registry/</span>
+│   └── <span class="dir">workflow-todo-state/</span>
+├── <span class="dir">.codex/</span>
+│   ├── <span class="dir">hooks/</span>
+│   ├── <span class="dir">rules/</span>
+│   ├── <span class="dir">scripts/</span>
+│   └── <span class="dir">workflows/</span>
+├── <span class="dir">.learnings/</span>
+├── <span class="dir">workspace/workflow-runs/</span>
+├── <span class="file">.codex/hooks.json</span>
+└── <span class="file">AGENTS.md</span>
+  </div>
+  <blockquote>仅在项目已接通自动 LLM usage 采集时，才会额外出现 <code>/.llm/prompt-cache/</code>。</blockquote>
+
+  <h3>本模板仓库的目录职责</h3>
+  <div class="tree">
+<span class="dir">profiles/</span>       <span class="comment">内置 Agent 布局合同（12 种内置 Profile）</span>
+<span class="dir">templates/</span>      <span class="comment">可安装的规则、hook 和初始文件</span>
+<span class="dir">skills/</span>         <span class="comment">可独立分发的 skill 包和工具（6 个功能模块）</span>
+<span class="dir">scripts/</span>        <span class="comment">仓库级验证命令和统一安装器</span>
+<span class="dir">tests/</span>          <span class="comment">安装、升级和状态转移回归测试</span>
+<span class="dir">docs/</span>           <span class="comment">便携性和第三方 Agent 接入说明</span>
+  </div>
+
+  <!-- ===== Footer ===== -->
+  <div class="footer">
+    <p>本文档基于 Agent Template Kits 仓库当前版本编写 · <a href="https://github.com/Treasoni/Agent-Template-Kits" target="_blank">GitHub 仓库</a> · MIT License</p>
+  </div>
+
+</main>
+
+<script>
+  // Sidebar active link on scroll
+  const sections = document.querySelectorAll('h2[id], h3[id]');
+  const sidebarLinks = document.querySelectorAll('.sidebar a');
+  const offsetMap = {};
+  sidebarLinks.forEach(link => {
+    const href = link.getAttribute('href');
+    if (href && href.startsWith('#')) offsetMap[href.slice(1)] = link;
+  });
+
+  function updateActiveLink() {
+    let currentId = '';
+    const scrollY = window.scrollY + 100;
+    sections.forEach(sec => {
+      if (sec.offsetTop <= scrollY) currentId = sec.id;
+    });
+    sidebarLinks.forEach(link => link.classList.remove('active'));
+    if (currentId && offsetMap[currentId]) offsetMap[currentId].classList.add('active');
+  }
+  window.addEventListener('scroll', updateActiveLink, { passive: true });
+  updateActiveLink();
+</script>
+
+</body>
+</html>

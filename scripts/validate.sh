@@ -44,7 +44,7 @@ if command -v perl >/dev/null 2>&1; then
   perl -c skills/security-secret-audit/scripts/detect-secrets.pl >/dev/null
 fi
 
-TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/template-ai-validate.XXXXXX")"
+TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/agent-template-kits-validate.XXXXXX")"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 log "self-learning generic install"

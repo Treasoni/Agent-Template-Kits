@@ -34,8 +34,8 @@ Python 脚本可直接在原生 Windows 运行。Bash 脚本可在 Linux、macOS
 ## 1. 获取模板并指定目标项目
 
 ```bash
-git clone https://github.com/Treasoni/template_ai.git
-cd template_ai
+git clone https://github.com/Treasoni/Agent-Template-Kits.git
+cd Agent-Template-Kits
 
 # 要接入这些模板的项目；目录必须已存在
 export TARGET=/absolute/path/to/your-project
