@@ -7,7 +7,6 @@
 - `digest`：记录本次任务中真实发生的学习点和错误。
 - `maintain-learnings`：当 `.learnings/` 变长或错误反复出现时，先修 skill / 模板 / hook / 项目规则，再归档已解决记录。
 - hooks：在会话开始时自动读取 `.learnings/RULES.md`、`.learnings/ERRORS.md` 和最近的 `.learnings/LEARNINGS.md`。
-- 多 agent 同步守护：检查多个 agent skill 目录是否保留同等共享功能。
 
 ## Install
 
@@ -93,24 +92,7 @@ Claude Code 内置 profile 示例：
 python3 .claude/skills/maintain-learnings/scripts/audit_learnings.py --root . --skills-dir .claude/skills --rules-file CLAUDE.md --hooks-path .claude/hooks
 ```
 
-检查多个 agent profile 的共享 skill 是否一致：
-
-```bash
-python3 .agents/skills/maintain-learnings/scripts/sync_platform_skills.py --root . --skill maintain-learnings
-python3 .agents/skills/maintain-learnings/scripts/sync_platform_skills.py --root . --platform generic=.agent/skills --base-platform agents --compare-platform generic --skill maintain-learnings
-```
-
-从一个 profile dry-run 同步到另一个 profile：
-
-```bash
-python3 .agents/skills/maintain-learnings/scripts/sync_platform_skills.py --root . --from-platform agents --to-platform claude --skill maintain-learnings
-```
-
-确认后应用：
-
-```bash
-python3 .agents/skills/maintain-learnings/scripts/sync_platform_skills.py --root . --from-platform agents --to-platform claude --skill maintain-learnings --apply
-```
+跨 profile 的技能与配置同步由独立的 `multi-agent-sync` skill 负责。先安装其 `.agent-sync/` runtime，再用 `--check` 预览并只对受影响 scope 执行 `--apply`；不要把它混入经验库维护流程。
 
 ## Customize
 

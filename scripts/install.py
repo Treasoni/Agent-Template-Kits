@@ -21,7 +21,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PROFILE_ROOT = ROOT / "profiles"
-COMPONENTS = ("self-learning", "env", "prompt-cache", "workflow", "registry")
+COMPONENTS = ("self-learning", "env", "prompt-cache", "workflow", "manifest-platform", "registry", "multi-agent-sync")
+DEFAULT_COMPONENTS = ("self-learning", "env", "prompt-cache", "workflow", "registry")
 
 
 @dataclass(frozen=True)
@@ -174,6 +175,29 @@ def commands_for(profile: Profile, target: Path, components: tuple[str, ...], ar
         if args.force_workflow:
             command.append("--force")
         commands.append(command)
+    if "manifest-platform" in components:
+        command = [
+            bash,
+            str(ROOT / ".agents/skills/manifest-platform/scripts/install.sh"),
+            "--target",
+            str(target),
+            "--agent-dir",
+            profile.agent_dir,
+            "--skills-dir",
+            profile.skills_dir,
+            "--workflows-dir",
+            f"{profile.agent_dir}/workflows",
+            "--subagents-dir",
+            f"{profile.agent_dir}/agents",
+            "--hooks-dir",
+            profile.hooks_dir or f"{profile.agent_dir}/hooks",
+            "--with-skill",
+        ]
+        if profile.hook_config:
+            command.extend(["--hooks-config", profile.hook_config])
+        if args.force_manifest_platform:
+            command.append("--force")
+        commands.append(command)
     if "registry" in components:
         commands.append(
             [
@@ -220,12 +244,13 @@ def build_parser(profiles: dict[str, Profile]) -> argparse.ArgumentParser:
     parser.add_argument("--detect", action="store_true", help="Show detected profile candidates and their evidence")
     parser.add_argument("--use-detected", action="store_true", help="Select every automatically detected profile")
     parser.add_argument("--profile", action="append", default=[], help="Explicit profile to install; repeat for multiple profiles")
-    parser.add_argument("--components", default=",".join(COMPONENTS), help="Comma-separated components (default: all)")
+    parser.add_argument("--components", default=",".join(DEFAULT_COMPONENTS), help="Comma-separated components (default: core components)")
     parser.add_argument("--apply", action="store_true", help="Perform the installation; without this flag only print the plan")
     parser.add_argument("--yes", action="store_true", help="Skip the interactive confirmation required by --apply")
     parser.add_argument("--overwrite", action="store_true", help="Allow self-learning and env installers to replace copied templates")
     parser.add_argument("--no-hooks", action="store_true", help="Do not install self-learning session hooks")
     parser.add_argument("--force-workflow", action="store_true", help="Pass --force to the workflow installer")
+    parser.add_argument("--force-manifest-platform", action="store_true", help="Pass --force to the manifest-platform installer")
     return parser
 
 
@@ -261,7 +286,7 @@ def main() -> int:
         parser.error("select a profile with --profile NAME or automatically select candidates with --use-detected")
     selected = [profiles[name] for name in selected_names]
 
-    bash_required = bool({"prompt-cache", "workflow"} & set(components))
+    bash_required = bool({"prompt-cache", "workflow", "manifest-platform"} & set(components))
     bash = find_bash() if bash_required else "bash"
     if bash_required and not bash:
         message = "Bash is required for prompt-cache/workflow. On Windows, install Git for Windows (Git Bash) or use WSL."
@@ -275,6 +300,15 @@ def main() -> int:
         for profile in selected
         for command in commands_for(profile, target, components, args, bash)
     ]
+    if "multi-agent-sync" in components:
+        all_commands.append(
+            [
+                sys.executable,
+                str(ROOT / "skills/multi-agent-sync/scripts/install.py"),
+                str(target),
+                "--apply",
+            ]
+        )
     print("\nInstall plan:")
     for command in all_commands:
         print(f"  {format_command(command)}")

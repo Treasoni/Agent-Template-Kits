@@ -349,6 +349,7 @@
     <a href="#sec-7-4" class="sub">7.4 可恢复 Workflow</a>
     <a href="#sec-7-5" class="sub">7.5 技能注册表</a>
     <a href="#sec-7-6" class="sub">7.6 密钥安全审计</a>
+    <a href="#sec-7-7" class="sub">7.7 多 Agent 同步与 Manifest</a>
   </div>
   <div class="sidebar-section">
     <div class="sidebar-label">进阶</div>
@@ -410,13 +411,13 @@
 
   <!-- ===== 2. 核心功能 ===== -->
   <h2 id="sec-2">2. 核心功能</h2>
-  <p>本产品包含 <strong>6 大功能模块</strong>，可单独安装，也可组合使用：</p>
+  <p>本产品包含 <strong>8 大功能模块</strong>，可单独安装，也可组合使用：</p>
 
   <div class="card-grid">
     <div class="card">
       <div class="card-icon icon-blue"><span class="card-icon-inner">🧠</span></div>
       <h4>自学习系统</h4>
-      <p>会话启动时自动加载历史经验，持续积累规则与纠错记录，支持多 Agent 同步守护。</p>
+      <p>会话启动时自动加载历史经验，持续积累规则与纠错记录。</p>
     </div>
     <div class="card">
       <div class="card-icon icon-purple"><span class="card-icon-inner">⚡</span></div>
@@ -442,6 +443,16 @@
       <div class="card-icon icon-red"><span class="card-icon-inner">🛡️</span></div>
       <h4>密钥安全审计</h4>
       <p>提交前扫描 Git 工作树中的暴露凭证，绝不输出凭证原文。</p>
+    </div>
+    <div class="card">
+      <div class="card-icon icon-blue"><span class="card-icon-inner">🔄</span></div>
+      <h4>多 Agent 同步</h4>
+      <p>以 canonical profile 为源，按 scope 同步共享配置并检查漂移。</p>
+    </div>
+    <div class="card">
+      <div class="card-icon icon-purple"><span class="card-icon-inner">📜</span></div>
+      <h4>Manifest Platform</h4>
+      <p>为 Agent 资产声明版本、能力、权限并验证 registry 合同。</p>
     </div>
   </div>
 
@@ -554,10 +565,12 @@
         <tr><td><code>prompt-cache</code></td><td>提示缓存 skill 和规则</td></tr>
         <tr><td><code>workflow</code></td><td>可恢复 workflow、routing 规则和状态脚本</td></tr>
         <tr><td><code>registry</code></td><td>技能注册表</td></tr>
+        <tr><td><code>manifest-platform</code></td><td>Agent 资产 manifest registry（显式选择）</td></tr>
+        <tr><td><code>multi-agent-sync</code></td><td>跨 profile 同步 runtime（显式选择）</td></tr>
       </tbody>
     </table>
   </div>
-  <p>默认全部安装。可通过 <code>--components</code> 按需选择：</p>
+  <p>默认安装前五项核心组件；后两项须通过 <code>--components</code> 显式选择：</p>
   <pre><code><span class="tok-keyword">python3</span> scripts/install.py \
   <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span> \
   <span class="tok-flag">--use-detected</span> \
@@ -578,6 +591,7 @@
         <tr><td><code>--yes</code></td><td>非交互环境跳过确认</td></tr>
         <tr><td><code>--overwrite</code></td><td>覆盖已有受管内容（需显式给出）</td></tr>
         <tr><td><code>--force-workflow</code></td><td>强制覆盖不同的 workflow 文件（需显式给出）</td></tr>
+        <tr><td><code>--force-manifest-platform</code></td><td>强制覆盖不同的 manifest registry 或 skill（需显式给出）</td></tr>
       </tbody>
     </table>
   </div>
@@ -691,8 +705,17 @@
         <tr><td><code>2</code></td><td>发现潜在凭证，应阻止提交</td></tr>
         <tr><td><code>1</code></td><td>扫描器错误，需排查</td></tr>
       </tbody>
-    </table>
+  </table>
   </div>
+
+  <h3 id="sec-7-7">7.7 多 Agent 同步与 Manifest Platform</h3>
+  <p><code>multi-agent-sync</code> 是跨 profile 配置的唯一同步器；<code>maintain-learnings</code> 只维护经验库。</p>
+  <pre><code>python3 scripts/install.py --target "$TARGET" --profile codex --components multi-agent-sync --apply --yes
+python3 "$TARGET/.agent-sync/sync_agents.py" --root "$TARGET" --check --scope skills
+python3 "$TARGET/.agent-sync/sync_agents.py" --root "$TARGET" --apply --scope skills
+
+python3 scripts/install.py --target "$TARGET" --profile codex --components manifest-platform --apply --yes
+python3 "$TARGET/.codex/platform/manifest-registry.py" --root "$TARGET" validate</code></pre>
 
   <!-- ===== 8. 自定义 Agent 接入 ===== -->
   <h2 id="sec-8">8. 自定义 Agent 接入</h2>

@@ -46,7 +46,7 @@ SKILL_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 PROFILE_ROOT="${WORKFLOW_PROFILE_ROOT:-}"
 
 if [ -z "$PROFILE_ROOT" ]; then
-  for candidate in "$SKILL_DIR/profiles" "$SCRIPT_DIR/../../profiles" "$SCRIPT_DIR/../../../profiles"; do
+  for candidate in "$SKILL_DIR/profiles" "$SCRIPT_DIR/../../profiles" "$SCRIPT_DIR/../../../profiles" "$SCRIPT_DIR/../../../../profiles"; do
     if [ -d "$candidate" ]; then
       PROFILE_ROOT="$(cd "$candidate" && pwd)"
       break

@@ -23,9 +23,13 @@ python3 -m py_compile \
   scripts/install.py \
   templates/self-learning/install.py \
   templates/self-learning/hooks/read_learnings.py \
-  templates/self-learning/skills/maintain-learnings/scripts/sync_platform_skills.py \
   templates/env/install.py \
-  skills/sync-skill-registry/scripts/sync_skill_registry.py
+  skills/sync-skill-registry/scripts/sync_skill_registry.py \
+  scripts/check-docs.py \
+  scripts/sync-runtime-skills.py \
+  skills/multi-agent-sync/scripts/install.py \
+  skills/multi-agent-sync/scripts/sync_agents.py \
+  .codex/platform/manifest-registry.py
 
 log "shell syntax"
 bash -n \
@@ -35,6 +39,7 @@ bash -n \
   skills/workflow-todo-state/scripts/install.sh \
   skills/workflow-todo-state/scripts/todo-state.sh \
   skills/workflow-todo-state/scripts/sync-workflow-routing.sh \
+  .agents/skills/manifest-platform/scripts/install.sh \
   templates/self-learning/hooks/read-learnings.sh \
   templates/env/codex/scripts/check-env-template.sh \
   templates/env/claude/scripts/check-env-template.sh
@@ -89,6 +94,15 @@ test -f "$TMP_DIR/.agent/skills/sync-skill-registry/SKILL.md"
 
 log "learning hook"
 python3 "$TMP_DIR/.agent/hooks/read_learnings.py" --project-root "$TMP_DIR" >/dev/null
+
+log "runtime skill mirrors"
+python3 scripts/sync-runtime-skills.py --check >/dev/null
+
+log "public documentation"
+python3 scripts/check-docs.py >/dev/null
+
+log "strict environment template"
+bash .codex/scripts/check-env-template.sh --strict >/dev/null
 
 log "regression tests"
 python3 -m unittest discover -s tests -p 'test_*.py'

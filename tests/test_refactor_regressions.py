@@ -113,6 +113,7 @@ class RefactorRegressionTests(unittest.TestCase):
                 for hook in entry["hooks"]
             ]
             self.assertIn("python3 '.codebuddy/hooks/read_learnings.py'", commands)
+            self.assertFalse((target / ".agent-sync").exists())
 
     def test_unified_installer_installs_every_component_for_every_profile(self) -> None:
         """Every profile gets all callable skills and their declared support files."""
@@ -447,6 +448,64 @@ class RefactorRegressionTests(unittest.TestCase):
             self.assertNotIn("`demo`", text)
             self.assertIn("`external`", text)
             self.assertIn("<!-- skill-registry:managed [] -->", text)
+
+    def test_runtime_skill_mirrors_and_strict_env_template_are_current(self) -> None:
+        run("python3", "scripts/sync-runtime-skills.py", "--check")
+        result = run("bash", ".codex/scripts/check-env-template.sh", "--strict")
+        self.assertIn("Env template check passed.", result.stdout)
+
+    def test_agent_runtime_workflow_installer_uses_all_profile_contracts(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            run(
+                "bash",
+                ".agents/skills/workflow-todo-state/scripts/install.sh",
+                directory,
+                "--profile",
+                "codebuddy",
+                "--with-skill",
+                "--init-layout",
+                "--update-agents",
+            )
+            target = Path(directory)
+            self.assertTrue((target / ".codebuddy/skills/workflow-todo-state/SKILL.md").is_file())
+            self.assertTrue((target / ".codebuddy/rules/workflow-routing.md").is_file())
+
+    def test_unified_installer_supports_optional_platform_components(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory)
+            run(
+                "python3",
+                "scripts/install.py",
+                "--target",
+                str(target),
+                "--profile",
+                "codex",
+                "--components",
+                "manifest-platform",
+                "--apply",
+                "--yes",
+            )
+            self.assertTrue((target / ".agents/skills/manifest-platform/SKILL.md").is_file())
+            run("python3", str(target / ".codex/platform/manifest-registry.py"), "--root", str(target), "validate")
+
+            run(
+                "python3",
+                "scripts/install.py",
+                "--target",
+                str(target),
+                "--profile",
+                "codex",
+                "--components",
+                "multi-agent-sync",
+                "--apply",
+                "--yes",
+            )
+            runtime = target / ".agent-sync/sync_agents.py"
+            self.assertTrue(runtime.is_file())
+            drift = run("python3", str(runtime), "--root", str(target), "--check", "--scope", "skills", check=False)
+            self.assertNotEqual(drift.returncode, 0)
+            run("python3", str(runtime), "--root", str(target), "--apply", "--scope", "skills")
+            run("python3", str(runtime), "--root", str(target), "--check", "--scope", "skills")
 
 
 if __name__ == "__main__":

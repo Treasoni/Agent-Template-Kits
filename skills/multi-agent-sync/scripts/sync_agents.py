@@ -89,7 +89,8 @@ def load_profiles(root: Path) -> list[dict[str, Any]]:
 
 def transform(text: str, source: dict[str, Any], target: dict[str, Any]) -> str:
     output = text
-    for key in PATH_KEYS - {"mcp"}:
+    keys = sorted(PATH_KEYS - {"mcp"}, key=lambda key: len(source["paths"][key]), reverse=True)
+    for key in keys:
         source_path = source["paths"][key]
         target_path = target["paths"][key]
         if source_path != target_path:
@@ -102,9 +103,14 @@ def transform(text: str, source: dict[str, Any], target: dict[str, Any]) -> str:
 
 def normalized(text: str, profiles: list[dict[str, Any]]) -> str:
     output = text.replace("\r\n", "\n")
+    replacements = [
+        (profile["paths"][key], "{" + key.upper() + "}")
+        for profile in profiles
+        for key in PATH_KEYS - {"mcp"}
+    ]
+    for path, placeholder in sorted(replacements, key=lambda item: len(item[0]), reverse=True):
+        output = output.replace(path, placeholder)
     for profile in profiles:
-        for key in PATH_KEYS - {"mcp"}:
-            output = output.replace(profile["paths"][key], "{" + key.upper() + "}")
         output = output.replace(f":{profile['id']}:", ":{AGENT}:")
         output = output.replace(f"{profile['name']} hook", "{HOOK}")
         output = output.replace(f"{profile['id']}-hook", "{HOOK}")

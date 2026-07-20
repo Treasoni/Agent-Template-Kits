@@ -17,6 +17,8 @@
 - 为长任务加入可恢复的 phase 状态和 workflow routing。
 - 统一 `.env.example` 维护方式，检查缺失、未使用变量和可疑凭证。
 - 优化 LLM 提示缓存布局，安装观测 schema 和回归样本。
+- 将共享 Agent 配置同步到 Codex、Claude Code、CodeBuddy 等 profile，并检测漂移。
+- 安装 manifest registry，声明 workflow、skill、hook 等 Agent 资产的版本、能力与权限。
 - 在提交前扫描 API Key、Token、密码和私钥。
 
 ## 运行要求
@@ -87,7 +89,7 @@ python3 scripts/install.py \
   --apply --yes
 ```
 
-可选组件是 `self-learning`、`env`、`prompt-cache`、`workflow` 和 `registry`，默认全部安装。统一安装器会把 `prompt-cache-optimizer`、`workflow-todo-state` 和 `sync-skill-registry` 的完整 skill 一并复制到所选 profile 的 skills 目录，再生成注册表。`prompt-cache` 与 `workflow` 使用 Bash：Linux/macOS 可直接运行；Windows 下安装器会寻找 Git Bash，找不到时会明确提示安装 Git for Windows 或使用 WSL。`--overwrite` 和 `--force-workflow` 都需要显式给出，避免覆盖已有定制内容。
+可选组件是 `self-learning`、`env`、`prompt-cache`、`workflow`、`registry`、`manifest-platform` 和 `multi-agent-sync`。默认安装前五项核心组件；后两项会引入额外的 registry 或 `.agent-sync/` runtime，必须显式写入 `--components`。统一安装器会把 `prompt-cache-optimizer`、`workflow-todo-state`、`sync-skill-registry` 和按需选择的 `manifest-platform` 复制到所选 profile 的 skills 目录。`prompt-cache`、`workflow` 与 `manifest-platform` 使用 Bash：Linux/macOS 可直接运行；Windows 下安装器会寻找 Git Bash，找不到时会明确提示安装 Git for Windows 或使用 WSL。`--overwrite`、`--force-workflow` 和 `--force-manifest-platform` 都需要显式给出，避免覆盖已有定制内容。
 
 ## 3. Codex 项目的推荐安装
 
@@ -274,6 +276,39 @@ python3 skills/sync-skill-registry/scripts/sync_skill_registry.py \
 ```
 
 脚本只管理生成区中标记为本地受管的 skills，会保留手工外部条目。详见 [skills/sync-skill-registry/SKILL.md](skills/sync-skill-registry/SKILL.md)。
+
+### 多 Agent 同步
+
+`multi-agent-sync` 是跨 profile 共享配置的唯一同步器；`maintain-learnings` 只维护 `.learnings/`。显式安装 runtime 后，先预览漂移，再只应用受影响 scope：
+
+```bash
+python3 scripts/install.py \
+  --target "$TARGET" \
+  --profile codex \
+  --components multi-agent-sync \
+  --apply --yes
+
+python3 "$TARGET/.agent-sync/sync_agents.py" --root "$TARGET" --check --scope skills
+python3 "$TARGET/.agent-sync/sync_agents.py" --root "$TARGET" --apply --scope skills
+```
+
+该 runtime 默认以 Codex 为 canonical profile，并包含 Codex、Claude Code 和 CodeBuddy 的路径合同。可在 `.agent-sync/agents/` 添加已受支持的 Agent profile。详见 [skills/multi-agent-sync/SKILL.md](skills/multi-agent-sync/SKILL.md)。
+
+### Manifest Platform
+
+`manifest-platform` 为 workflow、skill、hook 和 subagent 建立可验证的注册表与权限合同：
+
+```bash
+python3 scripts/install.py \
+  --target "$TARGET" \
+  --profile codex \
+  --components manifest-platform \
+  --apply --yes
+
+python3 "$TARGET/.codex/platform/manifest-registry.py" --root "$TARGET" validate
+```
+
+如 registry 或 skill 已被项目定制，先检查差异；确认可替换后才补充 `--force-manifest-platform`。
 
 ### 密钥审计
 

@@ -6,11 +6,13 @@
 - Before task work, apply `.learnings/RULES.md`, `.learnings/ERRORS.md`, and recent `.learnings/LEARNINGS.md`.
 - Codex loads the learning reminder through `.codex/hooks/read_learnings.py`; keep `.codex/hooks.json` pointed at that hook.
 - Record real recurring mistakes or reusable lessons in `.learnings/`, but fix the source skill, template, hook, script, or project rule before archiving resolved records.
-- Shared Codex skills live under `.agents/skills/`. After changing a shared skill, run:
+- Shared Codex skills live under `.agents/skills/`. Keep their distributable source in sync with:
 
 ```bash
-python3 .agents/skills/maintain-learnings/scripts/sync_platform_skills.py --root . --skill <skill>
+python3 scripts/sync-runtime-skills.py --check
 ```
+
+- Cross-profile configuration synchronization belongs to `multi-agent-sync`. When `.agent-sync/` is installed, preview with `python3 .agent-sync/sync_agents.py --check --scope skills` and apply only the affected scope.
 <!-- self-learning:end -->
 
 <!-- prompt-cache-bootstrap:begin -->

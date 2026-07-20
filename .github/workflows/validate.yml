@@ -10,14 +10,19 @@ permissions:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - name: Install validation dependency
+        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y ripgrep
       - name: Run project validation
+        shell: bash
         run: bash scripts/validate.sh
-      - name: Check environment template
-        run: bash .codex/scripts/check-env-template.sh --strict
       - name: Audit tracked files for secrets
+        shell: bash
         run: bash skills/security-secret-audit/scripts/audit-secrets.sh

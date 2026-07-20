@@ -58,7 +58,8 @@ Prefer kebab-case IDs, stable filenames, and concise descriptions. Preserve the 
 ### P3 Integrate Registries
 
 - If a workflow was created or changed, run `.codex/scripts/sync-workflow-routing.sh` and then `.codex/scripts/sync-workflow-routing.sh --check`.
-- If a shared skill under `.agents/skills/` was changed, run `python3 .agents/skills/maintain-learnings/scripts/sync_platform_skills.py --root . --skill <skill-id>`.
+- If a shared runtime skill under `.agents/skills/` was changed, run `python3 scripts/sync-runtime-skills.py --check`.
+- If `.agent-sync/` is configured and a change must reach other Agent profiles, use `python3 .agent-sync/sync_agents.py --check --scope <scope>` before applying that affected scope. `maintain-learnings` does not synchronize profiles.
 - If a hook was added or changed, verify `.codex/hooks.json` still points at valid files.
 - If a rule needs early loading, update `AGENTS.md` with only the smallest required pointer.
 

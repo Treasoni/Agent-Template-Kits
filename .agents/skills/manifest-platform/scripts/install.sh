@@ -19,6 +19,8 @@ Options:
   --hooks-dir <dir>      Hook discovery directory. Default: <agent-dir>/hooks
   --hooks-config <file>  Hook registration JSON. Default: runtime-specific
                          settings for Codex and Claude, or <agent-dir>/hooks.json
+  --with-skill           Copy the complete manifest-platform skill into the
+                         selected skill discovery directory
   --force                Overwrite differing registry files after review
   --validate             Run the installed validator after copying
 USAGE
@@ -33,8 +35,10 @@ HOOKS_DIR=""
 HOOKS_CONFIG=""
 FORCE=0
 VALIDATE=0
+WITH_SKILL=0
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SKILL_SOURCE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 SOURCE_DIR="$(cd "$SCRIPT_DIR/../assets/platform" && pwd)"
 
 detect_agent_dir() {
@@ -83,6 +87,7 @@ while [ "$#" -gt 0 ]; do
     --subagents-dir) require_value "$1" "${2:-}"; SUBAGENTS_DIR="$2"; shift 2 ;;
     --hooks-dir) require_value "$1" "${2:-}"; HOOKS_DIR="$2"; shift 2 ;;
     --hooks-config) require_value "$1" "${2:-}"; HOOKS_CONFIG="$2"; shift 2 ;;
+    --with-skill) WITH_SKILL=1; shift ;;
     --force) FORCE=1; shift ;;
     --validate) VALIDATE=1; shift ;;
     -h|--help) usage; exit 0 ;;
@@ -133,6 +138,7 @@ done
 TARGET_ROOT="$(cd "$TARGET" && pwd)"
 TARGET_DIR="$TARGET_ROOT/$AGENT_DIR/platform"
 mkdir -p "$TARGET_DIR"
+STAMP="$(date +%Y%m%d%H%M%S)"
 
 copy_or_refuse() {
   local source_file="$1"
@@ -142,6 +148,26 @@ copy_or_refuse() {
     exit 1
   fi
   cp "$source_file" "$target_file"
+}
+
+install_skill() {
+  local target_skill="$TARGET_ROOT/$SKILLS_DIR/manifest-platform"
+  if [ -e "$target_skill" ]; then
+    if diff -qr "$SKILL_SOURCE_DIR" "$target_skill" >/dev/null 2>&1; then
+      echo "Skipped unchanged skill: ${target_skill#$TARGET_ROOT/}."
+      return
+    fi
+    if [ "$FORCE" -ne 1 ]; then
+      echo "Refusing to overwrite $target_skill; rerun with --force after reviewing it." >&2
+      exit 1
+    fi
+    mv "$target_skill" "${target_skill}.bak.${STAMP}"
+    echo "Backed up differing skill: ${target_skill#$TARGET_ROOT/}.bak.${STAMP}"
+  fi
+  mkdir -p "$(dirname "$target_skill")"
+  cp -R "$SKILL_SOURCE_DIR" "$target_skill"
+  chmod +x "$target_skill/scripts/install.sh"
+  echo "Installed manifest-platform skill at ${target_skill#$TARGET_ROOT/}."
 }
 
 for file in manifest-registry.py manifest.schema.json README.md; do
@@ -182,6 +208,9 @@ EOF
 copy_or_refuse "$REGISTRY_TMP" "$TARGET_DIR/registry.yaml"
 
 chmod +x "$TARGET_DIR/manifest-registry.py"
+if [ "$WITH_SKILL" -eq 1 ]; then
+  install_skill
+fi
 echo "Installed Agent Platform registry at ${TARGET_DIR#$TARGET_ROOT/}."
 if [ "$VALIDATE" -eq 1 ]; then
   python3 "$TARGET_DIR/manifest-registry.py" --root "$TARGET_ROOT" validate
