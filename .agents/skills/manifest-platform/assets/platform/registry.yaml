@@ -6,6 +6,7 @@ discovery:
     Subagent: .codex/agents
     Hook: .codex/hooks
 policy:
+  hooksConfig: .codex/hooks.json
   allowedPermissions:
     filesystem:
       - none

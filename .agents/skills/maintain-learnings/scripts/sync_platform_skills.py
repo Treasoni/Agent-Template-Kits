@@ -123,13 +123,19 @@ def transform_text(text: str, source: str, target: str, dirs: dict[str, str]) ->
     source_kind = platform_kind(source)
     target_kind = platform_kind(target)
     if source_kind == "codex" and target_kind == "claude":
-        transformed = transformed.replace(".codex/hooks", ".claude/hooks")
+        transformed = transformed.replace(".codex/platform", ".claude/platform")
+        transformed = transformed.replace(".codex/workflows", ".claude/workflows")
+        transformed = transformed.replace(".codex/agents", ".claude/agents")
         transformed = transformed.replace(".codex/hooks.json", ".claude/settings.json")
+        transformed = transformed.replace(".codex/hooks", ".claude/hooks")
         transformed = transformed.replace("Codex hook", "Claude Code hook")
         transformed = transformed.replace("codex-hook", "claude-hook")
     elif source_kind == "claude" and target_kind == "codex":
-        transformed = transformed.replace(".claude/hooks", ".codex/hooks")
+        transformed = transformed.replace(".claude/platform", ".codex/platform")
+        transformed = transformed.replace(".claude/workflows", ".codex/workflows")
+        transformed = transformed.replace(".claude/agents", ".codex/agents")
         transformed = transformed.replace(".claude/settings.json", ".codex/hooks.json")
+        transformed = transformed.replace(".claude/hooks", ".codex/hooks")
         transformed = transformed.replace("Claude Code hook", "Codex hook")
         transformed = transformed.replace("claude-hook", "codex-hook")
     return transformed

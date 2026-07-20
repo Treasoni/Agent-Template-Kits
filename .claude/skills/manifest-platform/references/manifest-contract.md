@@ -24,6 +24,6 @@ spec:
     deprecated: false
 ```
 
-`entrypoint` is resolved relative to the manifest’s directory and must remain inside the project root. `dependsOn` uses exact artifact IDs such as `Skill/research-collector`. A Hook additionally declares `event: Stop` or `event: SessionStart`; it must still be registered in `.claude/hooks.json`.
+`entrypoint` is resolved relative to the manifest’s directory and must remain inside the project root. `dependsOn` uses exact artifact IDs such as `Skill/research-collector`. A Hook additionally declares `event: Stop` or `event: SessionStart`; it must still be registered in the hook JSON file declared by the registry’s `policy.hooksConfig`.
 
 Permission values are intentionally coarse: `filesystem` is `none`, `read`, or `write`; `network` and `subprocess` are `none` or `allow`; `git` is `none`, `read`, or `write`. Choose the maximum privilege that the artifact can actually request, then enforce a runtime policy that may narrow it further.

@@ -1,11 +1,12 @@
 apiVersion: agent-platform/v1
 discovery:
   kindDirectories:
-    Workflow: .codex/workflows
+    Workflow: .claude/workflows
     Skill: .claude/skills
-    Subagent: .codex/agents
+    Subagent: .claude/agents
     Hook: .claude/hooks
 policy:
+  hooksConfig: .claude/settings.json
   allowedPermissions:
     filesystem:
       - none
