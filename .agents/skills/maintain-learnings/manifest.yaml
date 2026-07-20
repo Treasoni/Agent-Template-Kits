@@ -1,0 +1,21 @@
+apiVersion: agent-platform/v1
+kind: Skill
+metadata:
+  name: maintain-learnings
+  version: 0.1.0
+  description: "Audit, repair, sync, and archive recurring project learning records at their source."
+spec:
+  entrypoint: SKILL.md
+  capabilities:
+    - learnings.audit
+    - learnings.maintain
+    - skills.sync
+  permissions:
+    filesystem: write
+    network: none
+    subprocess: allow
+    git: none
+  dependsOn: []
+  lifecycle:
+    discoverable: true
+    deprecated: false

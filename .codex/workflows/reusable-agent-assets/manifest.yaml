@@ -1,0 +1,23 @@
+apiVersion: agent-platform/v1
+kind: Workflow
+metadata:
+  name: reusable-agent-assets
+  version: 0.1.0
+  description: "Route and package supplied agent materials into reusable project assets."
+spec:
+  entrypoint: workflow.md
+  capabilities:
+    - agent-assets.route
+    - agent-assets.package
+    - agent-assets.verify
+  permissions:
+    filesystem: write
+    network: none
+    subprocess: allow
+    git: read
+  dependsOn:
+    - Skill/workflow-todo-state
+    - Skill/maintain-learnings
+  lifecycle:
+    discoverable: true
+    deprecated: false

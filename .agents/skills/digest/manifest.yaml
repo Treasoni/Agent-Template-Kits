@@ -1,0 +1,21 @@
+apiVersion: agent-platform/v1
+kind: Skill
+metadata:
+  name: digest
+  version: 0.1.0
+  description: "Record real task learnings and recurring mistakes into the project learning files."
+spec:
+  entrypoint: SKILL.md
+  capabilities:
+    - learnings.digest
+    - learnings.record
+  permissions:
+    filesystem: write
+    network: none
+    subprocess: allow
+    git: none
+  dependsOn:
+    - Skill/maintain-learnings
+  lifecycle:
+    discoverable: true
+    deprecated: false
