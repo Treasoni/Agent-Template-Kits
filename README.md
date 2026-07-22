@@ -44,6 +44,8 @@ export TARGET=/absolute/path/to/your-project
 test -d "$TARGET"
 ```
 
+On Windows, use `python` in the commands below; the scripts accept `python3` or `python`, and generated hooks use `python.exe` on Windows.
+
 后续示例都在本仓库根目录执行，`$TARGET` 始终指向目标项目。
 
 ## 2. 选择 Agent Profile

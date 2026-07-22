@@ -614,7 +614,7 @@ def main():
 
     # Step 10: Write back
     invocation_file.write_text(new_text, encoding="utf-8")
-    print(f"\n✓ 已更新 {invocation_file}")
+    print(f"\n[OK] 已更新 {invocation_file}")
 
     if added_names or removed_names:
         print("\n提示：如果同一项目有多个 agent profile，请同步其他 profile 的技能目录或注册表。")

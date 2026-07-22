@@ -134,6 +134,12 @@ def hook_python_command() -> str:
     return Path(sys.executable).name if os.name == "nt" else "python3"
 
 
+def child_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env.setdefault("PYTHON", hook_python_command())
+    return env
+
+
 def commands_for(profile: Profile, target: Path, components: tuple[str, ...], args: argparse.Namespace, bash: str) -> list[list[str]]:
     commands: list[list[str]] = []
     if "self-learning" in components:
@@ -322,7 +328,7 @@ def main() -> int:
 
     for command in all_commands:
         print(f"\n[RUN] {format_command(command)}")
-        subprocess.run(command, cwd=ROOT, check=True)
+        subprocess.run(command, cwd=ROOT, check=True, env=child_env())
     print("\n[OK] Installation complete.")
     return 0
 

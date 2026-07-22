@@ -41,6 +41,26 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILL_SOURCE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 SOURCE_DIR="$(cd "$SCRIPT_DIR/../assets/platform" && pwd)"
 
+is_python3() {
+  "$1" -c 'import sys; raise SystemExit(0 if sys.version_info[0] == 3 else 1)' >/dev/null 2>&1
+}
+
+find_python() {
+  if [ -n "${PYTHON:-}" ] && is_python3 "$PYTHON"; then
+    printf '%s\n' "$PYTHON"
+    return 0
+  fi
+  if command -v python3 >/dev/null 2>&1 && is_python3 python3; then
+    printf '%s\n' python3
+    return 0
+  fi
+  if command -v python >/dev/null 2>&1 && is_python3 python; then
+    printf '%s\n' python
+    return 0
+  fi
+  return 1
+}
+
 detect_agent_dir() {
   case "$SCRIPT_DIR" in
     */.claude/skills/*) printf '%s\n' ".claude" ;;
@@ -213,5 +233,9 @@ if [ "$WITH_SKILL" -eq 1 ]; then
 fi
 echo "Installed Agent Platform registry at ${TARGET_DIR#$TARGET_ROOT/}."
 if [ "$VALIDATE" -eq 1 ]; then
-  python3 "$TARGET_DIR/manifest-registry.py" --root "$TARGET_ROOT" validate
+  PYTHON_BIN="$(find_python)" || {
+    echo "Python 3 is required (python3 or python)" >&2
+    exit 1
+  }
+  "$PYTHON_BIN" "$TARGET_DIR/manifest-registry.py" --root "$TARGET_ROOT" validate
 fi

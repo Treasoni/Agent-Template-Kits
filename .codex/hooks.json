@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 '.codex/hooks/read_learnings.py'"
+            "command": "python.exe '.codex/hooks/read_learnings.py'"
           }
         ]
       }

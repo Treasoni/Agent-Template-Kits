@@ -15,11 +15,35 @@ require_command() {
   fi
 }
 
-require_command python3
 require_command bash
 
+is_python3() {
+  "$1" -c 'import sys; raise SystemExit(0 if sys.version_info[0] == 3 else 1)' >/dev/null 2>&1
+}
+
+find_python() {
+  if [ -n "${PYTHON:-}" ] && is_python3 "$PYTHON"; then
+    printf '%s\n' "$PYTHON"
+    return 0
+  fi
+  if command -v python3 >/dev/null 2>&1 && is_python3 python3; then
+    printf '%s\n' python3
+    return 0
+  fi
+  if command -v python >/dev/null 2>&1 && is_python3 python; then
+    printf '%s\n' python
+    return 0
+  fi
+  return 1
+}
+
+PYTHON_BIN="$(find_python)" || {
+  printf '%s\n' 'validate: missing required command: Python 3 (python3 or python)' >&2
+  exit 1
+}
+
 log "python syntax"
-python3 -m py_compile \
+"$PYTHON_BIN" -m py_compile \
   scripts/install.py \
   templates/self-learning/install.py \
   templates/self-learning/hooks/read_learnings.py \
@@ -55,10 +79,10 @@ TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/agent-template-kits-validate.XXXXXX")"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 log "self-learning generic install"
-python3 templates/self-learning/install.py --target "$TMP_DIR" --profile generic --overwrite >/dev/null
+"$PYTHON_BIN" templates/self-learning/install.py --target "$TMP_DIR" --profile generic --overwrite >/dev/null
 
 log "env generic install"
-python3 templates/env/install.py --target "$TMP_DIR" --profile generic --overwrite >/dev/null
+"$PYTHON_BIN" templates/env/install.py --target "$TMP_DIR" --profile generic --overwrite >/dev/null
 test -f "$TMP_DIR/.agent/rules/common/env.md"
 test -x "$TMP_DIR/.agent/scripts/check-env-template.sh"
 
@@ -96,24 +120,24 @@ test -x "$MANIFEST_TMP/.agent/platform/manifest-registry.py"
 test -f "$MANIFEST_TMP/.agent/platform/registry.yaml"
 
 log "skill registry generic dry-run/apply"
-python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --profile generic --root "$TMP_DIR" --create --with-skill --dry-run >/dev/null
+"$PYTHON_BIN" skills/sync-skill-registry/scripts/sync_skill_registry.py --profile generic --root "$TMP_DIR" --create --with-skill --dry-run >/dev/null
 test ! -e "$TMP_DIR/.agent/rules/common/skill-invocation.md"
-python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --profile generic --root "$TMP_DIR" --create --with-skill >/dev/null
+"$PYTHON_BIN" skills/sync-skill-registry/scripts/sync_skill_registry.py --profile generic --root "$TMP_DIR" --create --with-skill >/dev/null
 test -f "$TMP_DIR/.agent/skills/sync-skill-registry/SKILL.md"
 
 log "learning hook"
-python3 "$TMP_DIR/.agent/hooks/read_learnings.py" --project-root "$TMP_DIR" >/dev/null
+"$PYTHON_BIN" "$TMP_DIR/.agent/hooks/read_learnings.py" --project-root "$TMP_DIR" >/dev/null
 
 log "runtime skill mirrors"
-python3 scripts/sync-runtime-skills.py --check >/dev/null
+"$PYTHON_BIN" scripts/sync-runtime-skills.py --check >/dev/null
 
 log "public documentation"
-python3 scripts/check-docs.py >/dev/null
+"$PYTHON_BIN" scripts/check-docs.py >/dev/null
 
 log "strict environment template"
 bash .codex/scripts/check-env-template.sh --strict >/dev/null
 
 log "regression tests"
-python3 -m unittest discover -s tests -p 'test_*.py'
+"$PYTHON_BIN" -m unittest discover -s tests -p 'test_*.py'
 
 log "ok"

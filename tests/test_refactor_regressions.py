@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import tempfile
+import sys
 import unittest
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+RUN_PYTHON = sys.executable
+HOOK_PYTHON = "python.exe" if os.name == "nt" else "python3"
 
 
 def run(*args: str, cwd: Path = ROOT, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -40,7 +44,7 @@ class RefactorRegressionTests(unittest.TestCase):
             target = Path(directory)
             for profile, (skills_dir, rules_dir, scripts_dir, entry_file) in profiles.items():
                 run(
-                    "python3",
+                    RUN_PYTHON,
                     "templates/self-learning/install.py",
                     "--target",
                     str(target),
@@ -49,7 +53,7 @@ class RefactorRegressionTests(unittest.TestCase):
                     "--no-hooks",
                 )
                 run(
-                    "python3",
+                    RUN_PYTHON,
                     "templates/env/install.py",
                     "--target",
                     str(target),
@@ -69,7 +73,7 @@ class RefactorRegressionTests(unittest.TestCase):
             (target / "CODEBUDDY.md").write_text("# CodeBuddy\n", encoding="utf-8")
 
             detection = run(
-                "python3",
+                RUN_PYTHON,
                 "scripts/install.py",
                 "--target",
                 str(target),
@@ -79,7 +83,7 @@ class RefactorRegressionTests(unittest.TestCase):
             self.assertIn(".codebuddy", detection.stdout)
 
             preview = run(
-                "python3",
+                RUN_PYTHON,
                 "scripts/install.py",
                 "--target",
                 str(target),
@@ -92,7 +96,7 @@ class RefactorRegressionTests(unittest.TestCase):
             self.assertFalse((target / ".learnings").exists())
 
             run(
-                "python3",
+                RUN_PYTHON,
                 "scripts/install.py",
                 "--target",
                 str(target),
@@ -112,7 +116,7 @@ class RefactorRegressionTests(unittest.TestCase):
                 for entry in settings["hooks"]["SessionStart"]
                 for hook in entry["hooks"]
             ]
-            self.assertIn("python3 '.codebuddy/hooks/read_learnings.py'", commands)
+            self.assertIn(f"{HOOK_PYTHON} '.codebuddy/hooks/read_learnings.py'", commands)
             self.assertFalse((target / ".agent-sync").exists())
 
     def test_unified_installer_installs_every_component_for_every_profile(self) -> None:
@@ -128,7 +132,7 @@ class RefactorRegressionTests(unittest.TestCase):
             with self.subTest(profile=values["name"]), tempfile.TemporaryDirectory() as directory:
                 target = Path(directory)
                 run(
-                    "python3",
+                    RUN_PYTHON,
                     "scripts/install.py",
                     "--target",
                     str(target),
@@ -179,7 +183,7 @@ class RefactorRegressionTests(unittest.TestCase):
                     str(target),
                 )
                 run(
-                    "python3",
+                    RUN_PYTHON,
                     str(skills_dir / "sync-skill-registry/scripts/sync_skill_registry.py"),
                     "--profile",
                     values["name"],
@@ -201,7 +205,7 @@ class RefactorRegressionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory)
             run(
-                "python3",
+                RUN_PYTHON,
                 "templates/self-learning/install.py",
                 "--target",
                 str(target),
@@ -210,7 +214,7 @@ class RefactorRegressionTests(unittest.TestCase):
                 "--no-hooks",
             )
             run(
-                "python3",
+                RUN_PYTHON,
                 "skills/sync-skill-registry/scripts/sync_skill_registry.py",
                 "--profile",
                 "github-copilot",
@@ -271,7 +275,7 @@ class RefactorRegressionTests(unittest.TestCase):
             )
 
             run(
-                "python3",
+                RUN_PYTHON,
                 "templates/self-learning/install.py",
                 "--target",
                 str(target),
@@ -289,14 +293,14 @@ class RefactorRegressionTests(unittest.TestCase):
                 for hook in entry["hooks"]
             ]
             self.assertIn("keep-me", commands)
-            self.assertIn("python3 '.codex/hooks/read_learnings.py'", commands)
+            self.assertIn(f"{HOOK_PYTHON} '.codex/hooks/read_learnings.py'", commands)
             self.assertNotIn(str(target), config.read_text(encoding="utf-8"))
 
     def test_env_profiles_can_share_one_entry_file(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory)
             run(
-                "python3",
+                RUN_PYTHON,
                 "templates/env/install.py",
                 "--target",
                 str(target),
@@ -324,7 +328,7 @@ class RefactorRegressionTests(unittest.TestCase):
                 encoding="utf-8",
             )
             run(
-                "python3",
+                RUN_PYTHON,
                 "templates/self-learning/install.py",
                 "--target",
                 str(target),
@@ -346,7 +350,7 @@ class RefactorRegressionTests(unittest.TestCase):
             target.mkdir()
 
             run(
-                "python3",
+                RUN_PYTHON,
                 str(self_learning / "install.py"),
                 "--target",
                 str(target),
@@ -354,7 +358,7 @@ class RefactorRegressionTests(unittest.TestCase):
                 "generic",
             )
             run(
-                "python3",
+                RUN_PYTHON,
                 str(env_template / "install.py"),
                 "--target",
                 str(target),
@@ -433,7 +437,7 @@ class RefactorRegressionTests(unittest.TestCase):
                 encoding="utf-8",
             )
             command = (
-                "python3",
+                RUN_PYTHON,
                 "skills/sync-skill-registry/scripts/sync_skill_registry.py",
                 "--profile",
                 "generic",
@@ -450,7 +454,7 @@ class RefactorRegressionTests(unittest.TestCase):
             self.assertIn("<!-- skill-registry:managed [] -->", text)
 
     def test_runtime_skill_mirrors_and_strict_env_template_are_current(self) -> None:
-        run("python3", "scripts/sync-runtime-skills.py", "--check")
+        run(RUN_PYTHON, "scripts/sync-runtime-skills.py", "--check")
         result = run("bash", ".codex/scripts/check-env-template.sh", "--strict")
         self.assertIn("Env template check passed.", result.stdout)
 
@@ -474,7 +478,7 @@ class RefactorRegressionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory)
             run(
-                "python3",
+                RUN_PYTHON,
                 "scripts/install.py",
                 "--target",
                 str(target),
@@ -486,10 +490,10 @@ class RefactorRegressionTests(unittest.TestCase):
                 "--yes",
             )
             self.assertTrue((target / ".agents/skills/manifest-platform/SKILL.md").is_file())
-            run("python3", str(target / ".codex/platform/manifest-registry.py"), "--root", str(target), "validate")
+            run(RUN_PYTHON, str(target / ".codex/platform/manifest-registry.py"), "--root", str(target), "validate")
 
             run(
-                "python3",
+                RUN_PYTHON,
                 "scripts/install.py",
                 "--target",
                 str(target),
@@ -502,10 +506,10 @@ class RefactorRegressionTests(unittest.TestCase):
             )
             runtime = target / ".agent-sync/sync_agents.py"
             self.assertTrue(runtime.is_file())
-            drift = run("python3", str(runtime), "--root", str(target), "--check", "--scope", "skills", check=False)
+            drift = run(RUN_PYTHON, str(runtime), "--root", str(target), "--check", "--scope", "skills", check=False)
             self.assertNotEqual(drift.returncode, 0)
-            run("python3", str(runtime), "--root", str(target), "--apply", "--scope", "skills")
-            run("python3", str(runtime), "--root", str(target), "--check", "--scope", "skills")
+            run(RUN_PYTHON, str(runtime), "--root", str(target), "--apply", "--scope", "skills")
+            run(RUN_PYTHON, str(runtime), "--root", str(target), "--check", "--scope", "skills")
 
 
 if __name__ == "__main__":

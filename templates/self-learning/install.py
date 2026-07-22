@@ -10,8 +10,10 @@ agent runtime.
 from __future__ import annotations
 
 import argparse
+import os
 import json
 import shutil
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -84,6 +86,7 @@ def load_builtin_profiles() -> dict[str, AgentProfile]:
 
 
 BUILTIN_PROFILES = load_builtin_profiles()
+DEFAULT_PYTHON_COMMAND = Path(sys.executable).name if os.name == "nt" else "python3"
 
 
 def load_profile_file(path: str | Path) -> AgentProfile:
@@ -297,7 +300,11 @@ def main() -> int:
     parser.add_argument("--no-codex", action="store_true", help="Compatibility flag: do not install the codex profile.")
     parser.add_argument("--no-claude", action="store_true", help="Compatibility flag: do not install the claude profile.")
     parser.add_argument("--no-hooks", action="store_true", help="Do not install read-learnings hooks.")
-    parser.add_argument("--python-command", default="python3", help="Python command written into generated hook configs.")
+    parser.add_argument(
+        "--python-command",
+        default=DEFAULT_PYTHON_COMMAND,
+        help="Python command written into generated hook configs.",
+    )
     parser.add_argument(
         "--overwrite",
         action="store_true",
