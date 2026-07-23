@@ -506,10 +506,225 @@ class RefactorRegressionTests(unittest.TestCase):
             )
             runtime = target / ".agent-sync/sync_agents.py"
             self.assertTrue(runtime.is_file())
+            state = json.loads((target / ".agent-template-kits/install-state.json").read_text(encoding="utf-8"))
+            self.assertEqual(state["profiles"], ["codex"])
+            self.assertIn("manifest-platform", state["components"])
+            self.assertIn("multi-agent-sync", state["components"])
             drift = run(RUN_PYTHON, str(runtime), "--root", str(target), "--check", "--scope", "skills", check=False)
             self.assertNotEqual(drift.returncode, 0)
             run(RUN_PYTHON, str(runtime), "--root", str(target), "--apply", "--scope", "skills")
             run(RUN_PYTHON, str(runtime), "--root", str(target), "--check", "--scope", "skills")
+
+    def test_unified_installer_update_detects_modified_managed_file(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory)
+            run(
+                RUN_PYTHON,
+                "scripts/install.py",
+                "--target",
+                str(target),
+                "--profile",
+                "generic",
+                "--components",
+                "env",
+                "--apply",
+                "--yes",
+            )
+            state = json.loads((target / ".agent-template-kits/install-state.json").read_text(encoding="utf-8"))
+            rule = target / ".agent/rules/common/env.md"
+            self.assertIn(".agent/rules/common/env.md", state["managed_files"])
+            rule.write_text("# User customization\n", encoding="utf-8")
+
+            result = run(
+                RUN_PYTHON,
+                "scripts/install.py",
+                "update",
+                "--target",
+                str(target),
+                check=False,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("[CONFLICT] .agent/rules/common/env.md", result.stdout)
+            self.assertEqual(rule.read_text(encoding="utf-8"), "# User customization\n")
+
+    def test_unified_installer_update_accepts_and_backs_up_conflict(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory)
+            run(
+                RUN_PYTHON,
+                "scripts/install.py",
+                "--target",
+                str(target),
+                "--profile",
+                "generic",
+                "--components",
+                "env",
+                "--apply",
+                "--yes",
+            )
+            rule = target / ".agent/rules/common/env.md"
+            expected = rule.read_text(encoding="utf-8")
+            rule.write_text("# User customization\n", encoding="utf-8")
+
+            result = run(
+                RUN_PYTHON,
+                "scripts/install.py",
+                "update",
+                "--target",
+                str(target),
+                "--accept",
+                ".agent/rules/common/env.md",
+                "--apply",
+                "--yes",
+            )
+
+            self.assertIn("[BACKUP] .agent/rules/common/env.md", result.stdout)
+            self.assertEqual(rule.read_text(encoding="utf-8"), expected)
+            backups = list((target / ".agent-template-kits/backups").glob("*/.agent/rules/common/env.md"))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual(backups[0].read_text(encoding="utf-8"), "# User customization\n")
+
+    def test_unified_installer_update_refuses_symlinked_managed_files(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory)
+            run(
+                RUN_PYTHON,
+                "scripts/install.py",
+                "--target",
+                str(target),
+                "--profile",
+                "generic",
+                "--components",
+                "env",
+                "--apply",
+                "--yes",
+            )
+            rule = target / ".agent/rules/common/env.md"
+            external = target / "outside-project.md"
+            external.write_text("# External customization\n", encoding="utf-8")
+            rule.unlink()
+            try:
+                rule.symlink_to(external)
+            except OSError as error:
+                self.skipTest(f"symbolic links are unavailable: {error}")
+
+            result = run(
+                RUN_PYTHON,
+                "scripts/install.py",
+                "update",
+                "--target",
+                str(target),
+                "--accept",
+                ".agent/rules/common/env.md",
+                "--apply",
+                "--yes",
+                check=False,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("[ERROR] update refuses targets containing symbolic links", result.stderr)
+            self.assertEqual(external.read_text(encoding="utf-8"), "# External customization\n")
+
+    def test_unified_installer_update_keeps_profile_component_pairs(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory)
+            run(
+                RUN_PYTHON,
+                "scripts/install.py",
+                "--target",
+                str(target),
+                "--profile",
+                "generic",
+                "--components",
+                "env",
+                "--apply",
+                "--yes",
+            )
+            run(
+                RUN_PYTHON,
+                "scripts/install.py",
+                "--target",
+                str(target),
+                "--profile",
+                "codex",
+                "--components",
+                "workflow",
+                "--apply",
+                "--yes",
+            )
+
+            state = json.loads((target / ".agent-template-kits/install-state.json").read_text(encoding="utf-8"))
+            self.assertEqual(state["profile_components"], {"generic": ["env"], "codex": ["workflow"]})
+            run(
+                RUN_PYTHON,
+                "scripts/install.py",
+                "update",
+                "--target",
+                str(target),
+                "--apply",
+                "--yes",
+            )
+
+            self.assertTrue((target / ".agent/rules/common/env.md").is_file())
+            self.assertTrue((target / ".codex/rules/workflow-routing.md").is_file())
+            self.assertFalse((target / ".codex/rules/common/env.md").exists())
+            self.assertFalse((target / ".agent/rules/workflow-routing.md").exists())
+
+    def test_unified_installer_update_protects_user_bak_named_files(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory)
+            run(
+                RUN_PYTHON,
+                "scripts/install.py",
+                "--target",
+                str(target),
+                "--profile",
+                "generic",
+                "--components",
+                "self-learning",
+                "--apply",
+                "--yes",
+            )
+            user_file = target / ".agent/skills/digest/user.bak.md"
+            user_file.write_text("# User notes\n", encoding="utf-8")
+
+            result = run(
+                RUN_PYTHON,
+                "scripts/install.py",
+                "update",
+                "--target",
+                str(target),
+                check=False,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("[CONFLICT] .agent/skills/digest/user.bak.md", result.stdout)
+            self.assertEqual(user_file.read_text(encoding="utf-8"), "# User notes\n")
+
+    def test_prompt_cache_overwrite_is_explicit(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory)
+            command = (
+                "bash",
+                "skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh",
+                "--apply",
+                "--platform",
+                "generic",
+                "--with-skill",
+                "--target",
+                str(target),
+            )
+            run(*command)
+            rule = target / ".agent/rules/common/prompt-cache.md"
+            rule.write_text("# User prompt-cache customization\n", encoding="utf-8")
+
+            run(*command)
+            self.assertEqual(rule.read_text(encoding="utf-8"), "# User prompt-cache customization\n")
+
+            run(*command, "--overwrite")
+            self.assertNotEqual(rule.read_text(encoding="utf-8"), "# User prompt-cache customization\n")
+            self.assertIn("# Prompt Cache Rules", rule.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

@@ -380,33 +380,39 @@ bash skills/workflow-todo-state/scripts/install.sh \
 
 ## 7. 更新已安装的模板
 
-先更新本模板仓库：
+从本版本开始，使用统一安装器完成的安装会在目标项目保存
+`.agent-template-kits/install-state.json`。它记录已选 profile、组件和受管文件的
+指纹，让更新器能区分模板变更与项目自己的定制内容。
+
+先在**模板仓库**中选择要发布给用户的可信版本；这一步只更新模板源，不会修改目标项目的 Git：
 
 ```bash
-git pull --ff-only
+git fetch --tags origin
+git switch --detach v1.2.3   # 替换为你准备发布的版本标签
 ```
 
-然后按需重新运行安装器：
+然后先预览更新。更新器会把目标项目复制到临时目录，在副本上用原先的 profile 和组件生成候选结果；默认不会写入目标项目：
 
 ```bash
-# 更新受管 skill 和 hook 脚本。不会覆盖 .learnings 记录或无关 hooks。
-python3 templates/self-learning/install.py --target "$TARGET" --profile codex --overwrite
-
-# 更新 env 规则和检查脚本。
-python3 templates/env/install.py --target "$TARGET" --profile codex --overwrite
-
-# 安装内容未变时可直接重复运行。
-bash skills/workflow-todo-state/scripts/install.sh \
-  "$TARGET" \
-  --profile codex \
-  --with-skill \
-  --init-layout \
-  --update-agents
+python3 scripts/install.py update --target "$TARGET"
 ```
 
-如果 workflow 源码已升级且目标文件不同，安装器会拒绝直接覆盖。确认可替换后加 `--force`；旧文件会移动到带时间戳的 `.bak.*` 备份。
+如果输出了 `[CONFLICT] path`，表示该受管文件被项目修改、删除，或新模板将覆盖一个未受管的现有文件。更新会停止，直到你逐项确认；不要用通配符批量接受。确认无误后，将每个冲突路径显式写为一个 `--accept`：
 
-提示缓存安装器默认保留已有规则和观测资产。升级时应先运行 `--check`，再手工评估是否替换项目已定制的内容。
+```bash
+python3 scripts/install.py update \
+  --target "$TARGET" \
+  --accept .agent/rules/common/env.md \
+  --accept .agent/skills/prompt-cache-optimizer/SKILL.md \
+  --apply --yes
+```
+
+应用前，更新器会把所有将改动的现有文件备份到
+`.agent-template-kits/backups/<UTC 时间戳>/`，再执行安装并核对结果是否与预览一致。它不会执行 `git pull`、`fetch`，也不会修改目标项目的 Git 元数据。首次使用过旧的单独安装命令的项目没有状态文件；请先使用一次 `scripts/install.py --apply` 重新安装所需组件，之后才能用安全更新命令。
+
+之后用统一安装器补装 profile 或组件时，更新器会继续维护已安装的全部选择，而不是只更新最后一次补装的部分。为防止写入越过目标项目边界，安全更新会拒绝包含符号链接的目标目录；请先将相关链接替换为项目内的真实文件或目录。
+
+直接调用提示缓存安装器时仍默认保留已有规则、观测资产和 skill。只有明确给出 `--apply --overwrite` 才会替换它们。
 
 ## 8. 安全行为和幂等性
 
@@ -488,3 +494,5 @@ docs/           便携性和第三方 Agent 接入说明
 - [Workflow Todo State](skills/workflow-todo-state/SKILL.md)
 - [Skill Registry](skills/sync-skill-registry/SKILL.md)
 - [Security Secret Audit](skills/security-secret-audit/SKILL.md)
+- [许可证](LICENSE)
+- [发布流程](RELEASING.md)

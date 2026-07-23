@@ -52,6 +52,7 @@ log "python syntax"
   skills/manifest-platform/assets/platform/manifest-registry.py \
   scripts/check-docs.py \
   scripts/sync-runtime-skills.py \
+  scripts/validate-profiles.py \
   skills/multi-agent-sync/scripts/install.py \
   skills/multi-agent-sync/scripts/sync_agents.py \
   .codex/platform/manifest-registry.py
@@ -133,6 +134,9 @@ log "runtime skill mirrors"
 
 log "public documentation"
 "$PYTHON_BIN" scripts/check-docs.py >/dev/null
+
+log "profile contracts"
+"$PYTHON_BIN" scripts/validate-profiles.py >/dev/null
 
 log "strict environment template"
 bash .codex/scripts/check-env-template.sh --strict >/dev/null

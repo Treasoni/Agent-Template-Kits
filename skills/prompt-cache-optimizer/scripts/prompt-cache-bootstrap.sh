@@ -9,6 +9,7 @@ TARGET_DIR="."
 CUSTOM_AGENTS=()
 WITH_SKILL=false
 WITH_OBSERVABILITY=false
+OVERWRITE=false
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILL_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 ASSET_DIR="${PROMPT_CACHE_ASSET_DIR:-$SCRIPT_DIR}"
@@ -39,6 +40,7 @@ Modes:
 
 Options:
   --with-skill         Copy prompt-cache-optimizer into every selected profile's skills directory.
+  --overwrite          Replace existing prompt-cache rules, optional assets, and copied skills. Requires --apply.
   --with-observability Install or check `.llm/prompt-cache` contracts. Use only after automatic
                        provider-usage collection has been connected; this script does not collect it.
   --platform PLATFORM  Configure one built-in profile, `both` (codex + claude), `all`, or `none` (default: both).
@@ -142,6 +144,9 @@ while [ "$#" -gt 0 ]; do
     --with-observability)
       WITH_OBSERVABILITY=true
       ;;
+    --overwrite)
+      OVERWRITE=true
+      ;;
     --platform)
       if [ "$#" -lt 2 ]; then
         warn "--platform requires a profile name, both, all, or none"
@@ -178,6 +183,11 @@ while [ "$#" -gt 0 ]; do
   esac
   shift
 done
+
+if [ "$OVERWRITE" = true ] && [ "$MODE" != "apply" ]; then
+  warn "--overwrite requires --apply"
+  exit 2
+fi
 
 if ! selected_profile_specs >/dev/null; then
   exit 2
@@ -263,20 +273,28 @@ RULES
 install_asset() {
   local source_file="$1"
   local target_file="$2"
+  local existed=false
 
   if [ ! -f "$source_file" ]; then
     warn "template asset is missing: $source_file"
     exit 1
   fi
 
-  if [ -f "$target_file" ]; then
+  if [ -f "$target_file" ] && [ "$OVERWRITE" != true ]; then
     log "kept existing $target_file"
     return
+  fi
+  if [ -f "$target_file" ]; then
+    existed=true
   fi
 
   mkdir -p "$(dirname "$target_file")"
   cp "$source_file" "$target_file"
-  log "created $target_file"
+  if [ "$existed" = true ]; then
+    log "updated $target_file"
+  else
+    log "created $target_file"
+  fi
 }
 
 install_observability() {
@@ -317,6 +335,9 @@ install_rule() {
     mkdir -p "$(dirname "$rule_file")"
     rule_content > "$rule_file"
     log "created $rule_file for $name"
+  elif [ "$OVERWRITE" = true ]; then
+    rule_content > "$rule_file"
+    log "updated $rule_file for $name"
   else
     log "kept existing $rule_file for $name"
   fi
@@ -392,9 +413,12 @@ install_skill() {
     return 0
   fi
   target_skill="$(target_path "${skills_dir%/}/prompt-cache-optimizer")"
-  if [ -e "$target_skill" ]; then
+  if [ -e "$target_skill" ] && [ "$OVERWRITE" != true ]; then
     log "kept existing $target_skill"
     return
+  fi
+  if [ -e "$target_skill" ]; then
+    rm -rf "$target_skill"
   fi
   mkdir -p "$(dirname "$target_skill")"
   cp -R "$SKILL_DIR" "$target_skill"
