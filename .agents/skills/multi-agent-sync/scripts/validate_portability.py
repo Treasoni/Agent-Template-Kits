@@ -16,6 +16,14 @@ GENERATED_HOOK_CONFIGS = {
     Path(".claude/settings.json"),
     Path(".codebuddy/settings.json"),
 }
+LOCAL_ONLY_FILES = {
+    Path(".claude/settings.local.json"),
+}
+SCANNER_IMPLEMENTATIONS = {
+    Path(directory_name) / "skills/multi-agent-sync/scripts/validate_portability.py"
+    for directory_name in AGENT_DIRECTORIES
+}
+SCANNER_IMPLEMENTATIONS.add(Path(".agent-sync/validate_portability.py"))
 PLATFORMS = ("windows", "macos", "linux")
 ABSOLUTE_PATH = re.compile(r"/Users/|/home/|(?<![A-Za-z0-9_])[A-Za-z]:[\\/]")
 SHELL_SHEBANG = re.compile(r"^#!.*\b(?:zsh|bash|sh|cmd(?:\.exe)?|powershell(?:\.exe)?)(?:\s|$)", re.IGNORECASE)
@@ -33,7 +41,10 @@ def candidate_files(root: Path) -> Iterable[tuple[Path, Path]]:
             if not path.is_file():
                 continue
             relative_path = path.relative_to(root)
-            if relative_path in GENERATED_HOOK_CONFIGS:
+            if relative_path in GENERATED_HOOK_CONFIGS | LOCAL_ONLY_FILES:
+                continue
+            # Packaged copies contain the detector's own regex literals.
+            if relative_path in SCANNER_IMPLEMENTATIONS:
                 continue
             if relative_path.parts[:2] == (".agent-sync", "local"):
                 continue

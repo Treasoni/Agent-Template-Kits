@@ -19,6 +19,11 @@ def runtime_files(target: Path) -> list[tuple[Path, Path, bool]]:
     files = [
         (PACKAGE_ROOT / "scripts" / "sync_agents.py", runtime / "sync_agents.py", False),
         (PACKAGE_ROOT / "scripts" / "bootstrap.py", runtime / "bootstrap.py", False),
+        (
+            PACKAGE_ROOT / "scripts" / "validate_portability.py",
+            runtime / "validate_portability.py",
+            False,
+        ),
         (PACKAGE_ROOT / "assets" / "mcp-servers.json", runtime / "mcp-servers.json", True),
     ]
     for profile in sorted((PACKAGE_ROOT / "profiles").glob("*.yaml")):

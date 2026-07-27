@@ -17,6 +17,27 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Verify portable agent synchronization
+        shell: pwsh
+        run: |
+          $project = Join-Path $env:RUNNER_TEMP "agent-sync-validation"
+          New-Item -ItemType Directory -Force -Path $project | Out-Null
+          python skills/multi-agent-sync/scripts/install.py $project --apply
+          $hook = Join-Path $project ".codex/hooks/read_learnings.py"
+          New-Item -ItemType Directory -Force -Path (Split-Path $hook) | Out-Null
+          [System.IO.File]::WriteAllText($hook, "print('ok')`n")
+          $sync = Join-Path $project ".agent-sync/sync_agents.py"
+          $bootstrap = Join-Path $project ".agent-sync/bootstrap.py"
+          $validator = Join-Path $project ".agent-sync/validate_portability.py"
+          python $sync --root $project --apply
+          python $sync --root $project --check
+          python $bootstrap --root $project --apply
+          python $bootstrap --root $project --check
+          $targetPlatform = "${{ runner.os }}".ToLowerInvariant()
+          python $validator --root . --platform $targetPlatform
       - name: Install validation dependency
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y ripgrep

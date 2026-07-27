@@ -185,6 +185,8 @@ def sync_tree(root: Path, source_root: Path, target_root: Path, source: dict[str
 
 def sync_instructions(root: Path, source: dict[str, Any], target: dict[str, Any], apply: bool) -> list[Finding]:
     source_path = root / source["paths"]["instructions"]
+    if not source_path.is_file():
+        return []
     target_path = root / target["paths"]["instructions"]
     expected = rendered_bytes(source_path, source, target)
     actual = target_path.read_bytes() if target_path.exists() else None

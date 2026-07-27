@@ -55,7 +55,12 @@ log "python syntax"
   scripts/validate-profiles.py \
   skills/multi-agent-sync/scripts/install.py \
   skills/multi-agent-sync/scripts/sync_agents.py \
+  skills/multi-agent-sync/scripts/bootstrap.py \
+  skills/multi-agent-sync/scripts/validate_portability.py \
   .codex/platform/manifest-registry.py
+
+log "multi-agent sync tests"
+"$PYTHON_BIN" -m unittest tests.test_multi_agent_sync
 
 log "shell syntax"
 bash -n \

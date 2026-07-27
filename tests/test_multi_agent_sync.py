@@ -111,6 +111,38 @@ class MultiAgentSyncTests(unittest.TestCase):
                 self.assertEqual(checked.returncode, 0, checked.stderr + checked.stdout)
                 self.assertIn("[OK]", checked.stdout)
 
+    def test_validator_skips_its_packaged_copies_but_scans_adjacent_shared_files(self):
+        validator = load_module("validate_portability_packaged_copies", "validate_portability.py")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            packaged_validator = (
+                root
+                / ".agents/skills/multi-agent-sync/scripts/validate_portability.py"
+            )
+            adjacent_script = packaged_validator.with_name("shared_check.py")
+            installed_validator = root / ".agent-sync/validate_portability.py"
+            local_settings = root / ".claude/settings.local.json"
+            shared_settings = root / ".claude/settings.shared.json"
+            for path in (
+                packaged_validator,
+                adjacent_script,
+                installed_validator,
+                local_settings,
+                shared_settings,
+            ):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("path = '/Users/alice/project'\n", encoding="utf-8")
+
+            findings = validator.validate_tree(root, "macos")
+
+        self.assertEqual(
+            findings,
+            [
+                ".agents/skills/multi-agent-sync/scripts/shared_check.py: absolute-path",
+                ".claude/settings.shared.json: absolute-path",
+            ],
+        )
+
     def test_validator_cli_returns_one_for_invalid_source_on_each_platform(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -308,6 +340,70 @@ class MultiAgentSyncTests(unittest.TestCase):
                 settings = json.loads(config.read_text(encoding="utf-8"))
                 command = settings["hooks"]["SessionStart"][0]["hooks"][0]["command"]
                 self.assertIn(sys.executable, command)
+
+    def test_installed_runtime_bootstraps_and_checks_all_scopes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            install = RUNTIME / "install.py"
+            subprocess.run(
+                [sys.executable, str(install), str(root), "--apply"],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            runtime = root / ".agent-sync"
+            source_hook = root / ".codex/hooks/read_learnings.py"
+            source_hook.parent.mkdir(parents=True)
+            source_hook.write_text("print('ok')\n", encoding="utf-8")
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(runtime / "sync_agents.py"),
+                    "--root",
+                    str(root),
+                    "--apply",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(runtime / "sync_agents.py"),
+                    "--root",
+                    str(root),
+                    "--check",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(runtime / "bootstrap.py"),
+                    "--root",
+                    str(root),
+                    "--apply",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            checked = subprocess.run(
+                [
+                    sys.executable,
+                    str(runtime / "validate_portability.py"),
+                    "--root",
+                    str(root),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(checked.returncode, 0, checked.stderr + checked.stdout)
 
     def test_source_for_scope_uses_scope_override_then_global_default(self):
         sync = load_module("sync_agents", "sync_agents.py")

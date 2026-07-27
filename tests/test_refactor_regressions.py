@@ -27,6 +27,52 @@ def run(*args: str, cwd: Path = ROOT, check: bool = True) -> subprocess.Complete
 
 
 class RefactorRegressionTests(unittest.TestCase):
+    def test_ci_runs_python_agent_sync_checks_across_existing_os_matrix(self) -> None:
+        workflow = (ROOT / ".github/workflows/validate.yml").read_text(encoding="utf-8")
+
+        for runner in ("ubuntu-latest", "macos-latest", "windows-latest"):
+            self.assertIn(runner, workflow)
+        self.assertIn("actions/setup-python@", workflow)
+        self.assertIn("shell: pwsh", workflow)
+        self.assertIn("$env:RUNNER_TEMP", workflow)
+        self.assertIn(".agent-sync/sync_agents.py", workflow)
+        self.assertIn("--root $project --apply", workflow)
+        self.assertIn(".agent-sync/bootstrap.py", workflow)
+        self.assertIn(".agent-sync/validate_portability.py", workflow)
+        self.assertIn("bash scripts/validate.sh", workflow)
+
+    def test_host_local_claude_settings_are_ignored_and_untracked(self) -> None:
+        ignored = run(
+            "git",
+            "check-ignore",
+            "--no-index",
+            ".claude/settings.local.json",
+            check=False,
+        )
+        tracked = run(
+            "git",
+            "ls-files",
+            "--error-unmatch",
+            ".claude/settings.local.json",
+            check=False,
+        )
+
+        self.assertEqual(ignored.returncode, 0, ignored.stderr + ignored.stdout)
+        self.assertNotEqual(tracked.returncode, 0, tracked.stderr + tracked.stdout)
+
+    def test_repository_shared_assets_pass_portability_validation(self) -> None:
+        for platform_name in ("windows", "macos", "linux"):
+            result = run(
+                RUN_PYTHON,
+                "skills/multi-agent-sync/scripts/validate_portability.py",
+                "--root",
+                ".",
+                "--platform",
+                platform_name,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+
     def test_mainstream_profiles_install_to_their_declared_layouts(self) -> None:
         profiles = {
             "codebuddy": (".codebuddy/skills", ".codebuddy/rules", ".codebuddy/scripts", "CODEBUDDY.md"),

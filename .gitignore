@@ -11,4 +11,5 @@ venv/
 .agent-sync/local/
 .codex/hooks.json
 .claude/settings.json
+.claude/settings.local.json
 .codebuddy/settings.json
