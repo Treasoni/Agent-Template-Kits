@@ -354,7 +354,8 @@ class MultiAgentSyncTests(unittest.TestCase):
             runtime = root / ".agent-sync"
             source_hook = root / ".codex/hooks/read_learnings.py"
             source_hook.parent.mkdir(parents=True)
-            source_hook.write_text("print('ok')\n", encoding="utf-8")
+            source_hook.write_bytes(b"print('ok')\n")
+            self.assertEqual(source_hook.read_bytes(), b"print('ok')\n")
             subprocess.run(
                 [
                     sys.executable,

@@ -26,6 +26,7 @@ jobs:
           $project = Join-Path $env:RUNNER_TEMP "agent-sync-validation"
           New-Item -ItemType Directory -Force -Path $project | Out-Null
           python skills/multi-agent-sync/scripts/install.py $project --apply
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $hook = Join-Path $project ".codex/hooks/read_learnings.py"
           New-Item -ItemType Directory -Force -Path (Split-Path $hook) | Out-Null
           [System.IO.File]::WriteAllText($hook, "print('ok')`n")
@@ -33,11 +34,16 @@ jobs:
           $bootstrap = Join-Path $project ".agent-sync/bootstrap.py"
           $validator = Join-Path $project ".agent-sync/validate_portability.py"
           python $sync --root $project --apply
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python $sync --root $project --check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python $bootstrap --root $project --apply
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python $bootstrap --root $project --check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $targetPlatform = "${{ runner.os }}".ToLowerInvariant()
           python $validator --root . --platform $targetPlatform
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Install validation dependency
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y ripgrep

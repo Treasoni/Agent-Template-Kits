@@ -41,6 +41,26 @@ class RefactorRegressionTests(unittest.TestCase):
         self.assertIn(".agent-sync/validate_portability.py", workflow)
         self.assertIn("bash scripts/validate.sh", workflow)
 
+    def test_ci_exits_after_every_native_python_failure(self) -> None:
+        lines = (ROOT / ".github/workflows/validate.yml").read_text(
+            encoding="utf-8"
+        ).splitlines()
+        python_commands = [
+            index
+            for index, line in enumerate(lines)
+            if line.strip().startswith("python ")
+        ]
+        guard = "if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }"
+
+        self.assertGreater(len(python_commands), 0)
+        for index in python_commands:
+            self.assertLess(index + 1, len(lines))
+            self.assertEqual(
+                lines[index + 1].strip(),
+                guard,
+                f"native failure after {lines[index].strip()!r} could be masked",
+            )
+
     def test_host_local_claude_settings_are_ignored_and_untracked(self) -> None:
         ignored = run(
             "git",
