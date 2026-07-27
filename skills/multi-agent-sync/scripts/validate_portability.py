@@ -18,8 +18,8 @@ GENERATED_HOOK_CONFIGS = {
 }
 PLATFORMS = ("windows", "macos", "linux")
 ABSOLUTE_PATH = re.compile(r"/Users/|/home/|(?<![A-Za-z0-9_])[A-Za-z]:[\\/]")
-SHELL_SHEBANG = re.compile(r"^#!.*\b(?:zsh|bash|sh|cmd(?:\.exe)?|powershell)(?:\s|$)", re.IGNORECASE)
-SHELL_COMMAND = re.compile(r"(?<![A-Za-z0-9_.-])(?:zsh|bash|cmd\.exe|powershell)(?![A-Za-z0-9_.-])", re.IGNORECASE)
+SHELL_SHEBANG = re.compile(r"^#!.*\b(?:zsh|bash|sh|cmd(?:\.exe)?|powershell(?:\.exe)?)(?:\s|$)", re.IGNORECASE)
+SHELL_COMMAND = re.compile(r"(?<![A-Za-z0-9_.-])(?:zsh|bash|cmd\.exe|powershell(?:\.exe)?)(?![A-Za-z0-9_.-])", re.IGNORECASE)
 
 
 def candidate_files(root: Path) -> Iterable[tuple[Path, Path]]:

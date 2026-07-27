@@ -50,6 +50,21 @@ class MultiAgentSyncTests(unittest.TestCase):
         self.assertIn(".codebuddy/hooks/demo.py: absolute-path", findings)
         self.assertIn(".codebuddy/hooks/demo.py: shell-hook", findings)
 
+    def test_validator_reports_powershell_executable_command_and_shebang(self):
+        validator = load_module("validate_portability", "validate_portability.py")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            command_hook = root / ".codex/hooks/command.py"
+            shebang_hook = root / ".codex/hooks/shebang.py"
+            command_hook.parent.mkdir(parents=True)
+            command_hook.write_text("powershell.exe -File demo.ps1\n", encoding="utf-8")
+            shebang_hook.write_text("#!/usr/bin/powershell.exe\n", encoding="utf-8")
+
+            findings = validator.validate_tree(root, "windows")
+
+        self.assertIn(".codex/hooks/command.py: shell-hook", findings)
+        self.assertIn(".codex/hooks/shebang.py: shell-hook", findings)
+
     def test_validator_accepts_portable_sources_on_all_platforms_and_skips_local_outputs(self):
         validator = load_module("validate_portability", "validate_portability.py")
         with tempfile.TemporaryDirectory() as directory:
@@ -66,6 +81,21 @@ class MultiAgentSyncTests(unittest.TestCase):
 
             for platform_name in ("windows", "macos", "linux"):
                 self.assertEqual(validator.validate_tree(root, platform_name), [])
+                checked = subprocess.run(
+                    [
+                        sys.executable,
+                        str(RUNTIME / "validate_portability.py"),
+                        "--root",
+                        str(root),
+                        "--platform",
+                        platform_name,
+                    ],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(checked.returncode, 0, checked.stderr + checked.stdout)
+                self.assertIn("[OK]", checked.stdout)
 
     def test_validator_cli_returns_one_for_invalid_source_on_each_platform(self):
         with tempfile.TemporaryDirectory() as directory:
