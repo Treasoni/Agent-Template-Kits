@@ -8,3 +8,7 @@ __pycache__/
 .env.*.local
 venv/
 .venv/
+.agent-sync/local/
+.codex/hooks.json
+.claude/settings.json
+.codebuddy/settings.json

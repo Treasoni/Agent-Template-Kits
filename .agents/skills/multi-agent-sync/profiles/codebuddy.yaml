@@ -1,0 +1,14 @@
+id: codebuddy
+name: CodeBuddy
+canonical: false
+canonical_scopes: scripts,workflows
+mcp_format: project-json
+paths:
+  skills: .codebuddy/skills
+  rules: .codebuddy/rules
+  hooks: .codebuddy/hooks
+  hook_config: .codebuddy/settings.json
+  scripts: .codebuddy/scripts
+  workflows: .codebuddy/workflows
+  instructions: CODEBUDDY.md
+  mcp: .mcp.json

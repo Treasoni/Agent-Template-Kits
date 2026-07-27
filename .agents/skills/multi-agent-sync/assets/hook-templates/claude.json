@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python.exe '.codex/hooks/read_learnings.py'"
+            "command": "\"{{PYTHON_EXECUTABLE}}\" \"{{HOOK_SCRIPT}}\""
           }
         ]
       }

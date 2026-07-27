@@ -4,7 +4,7 @@
 ## Self-Learning
 
 - Before task work, apply `.learnings/RULES.md`, `.learnings/ERRORS.md`, and recent `.learnings/LEARNINGS.md`.
-- Codex loads the learning reminder through `.codex/hooks/read_learnings.py`; keep `.codex/hooks.json` pointed at that hook.
+- Codex loads the learning reminder through `.codex/hooks/read_learnings.py`. After a fresh clone, install `.agent-sync` and run its `bootstrap.py --apply` command to create the ignored `.codex/hooks.json` for the current host.
 - Record real recurring mistakes or reusable lessons in `.learnings/`, but fix the source skill, template, hook, script, or project rule before archiving resolved records.
 - Shared Codex skills live under `.agents/skills/`. Keep their distributable source in sync with:
 

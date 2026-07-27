@@ -2,6 +2,39 @@
 
 本仓库的目标是让模板能迁移到不同 agent、不同仓库、不同操作系统，而不是只服务某一个本地工具。
 
+## Cross-Agent Synchronization
+
+`skills/multi-agent-sync/` 是可分发的规范包，`.agents/skills/multi-agent-sync/`
+是由 `scripts/sync-runtime-skills.py` 生成的 Codex runtime mirror。跨 profile
+同步时，先读取 `.agent-sync/agents/*.yaml` 确认每个 scope 的规范来源，再按
+`--check`、`--apply`、全量 `--check` 的顺序执行。同步完成后运行
+`bootstrap.py --apply` 和 `bootstrap.py --check`，最后使用
+`validate_portability.py` 检查交付目标平台。
+
+不同操作系统使用各自的原生 Python 3 启动方式：
+
+| 系统 | 启动命令 |
+| --- | --- |
+| Windows | `py -3 <script> <arguments>` |
+| macOS | `python3 <script> <arguments>` |
+| Linux | `python3 <script> <arguments>` |
+
+安装后的 `.agent-sync/` 包含同步器、profile 和 hook 模板。仓库只跟踪可移植
+模板与 hook 脚本；`.codex/hooks.json`、`.claude/settings.json`、
+`.codebuddy/settings.json` 和 `.agent-sync/local/` 是 bootstrap 根据当前
+Python 解释器生成的本机文件，不应提交。fresh clone 上先安装 runtime：
+
+```bash
+python3 skills/multi-agent-sync/scripts/install.py . --dry-run
+python3 skills/multi-agent-sync/scripts/install.py . --apply
+python3 .agent-sync/bootstrap.py --root . --apply
+python3 .agent-sync/bootstrap.py --root . --check
+```
+
+Windows 对应命令将每个 `python3` 替换为 `py -3`。完整同步步骤、`--from`
+的范围限制和跨平台 rationalization 见
+`skills/multi-agent-sync/SKILL.md`。
+
 ## Agent Profile Model
 
 每个 agent profile 只描述目标项目里的目录布局：
@@ -67,7 +100,9 @@ python3 templates/env/install.py --target . --profile-file /path/to/myagent.yaml
 - Avoid macOS-only commands and BSD-only flags when a Python implementation is reasonable.
 - Native Windows agents should prefer Python hooks such as `read_learnings.py`; Bash scripts are expected to run in Linux, macOS, WSL, or Git Bash.
 - `scripts/install.py` is the cross-platform coordinator: it uses the running Python interpreter for Python components and searches `PATH` plus common Git for Windows locations for Bash when a selected component needs it.
-- CodeBuddy's `SessionStart` hook is installed as a Python command in `.codebuddy/settings.json`; on Windows, CodeBuddy itself executes hooks through Git Bash and the unified installer writes the active Python executable name rather than a Unix-only path.
+- `SessionStart` hook 以 Python 命令写入各 profile 的本机 settings 文件。
+  bootstrap 使用当前 `sys.executable`，因此生成内容可以包含本机绝对路径；
+  这些 settings 文件必须保持忽略，不能成为可移植源文件。
 
 ## Adding A New Agent
 
