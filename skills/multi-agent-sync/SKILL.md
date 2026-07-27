@@ -53,3 +53,25 @@ Use `.agent-sync/agents/*.yaml` as the path registry. Read the relevant profile 
 - Keep credentials out of `mcp-servers.json`; use environment-variable references.
 - Preserve target-only files and non-hook settings. The synchronizer never deletes files and only replaces the `hooks` key in target settings JSON.
 - Add a new Agent by creating a simple-mapping YAML profile; see [profile schema](references/profile-schema.md). Do not add a profile until its MCP format is supported by the synchronizer.
+
+## Cross-platform rationalizations to reject
+
+Fresh-context baseline prompts exposed the following shortcuts. They are
+acceptance cases for this skill: do not adopt either shortcut when synchronizing
+across operating systems.
+
+| Observed shortcut | Required response |
+| --- | --- |
+| "convert the Windows-specific paths and PowerShell hook to macOS-compatible equivalents" | Do not exchange one platform-specific path or shell for another. Preserve portable source paths and use the target profile's supported hook format. |
+| "run the generated hook through a POSIX shell (Git Bash)" | Do not make a Windows target depend on Git Bash merely to bypass executable-hook support. Generate a hook command Windows can execute directly while leaving canonical source files intact. |
+
+### Baseline evidence
+
+| Fresh-context scenario | Observed response | `python.exe` retained | Absolute path retained | OS-specific shell retained or introduced | Settings silently overwritten |
+| --- | --- | --- | --- | --- | --- |
+| Copy the Codex SessionStart hook to Claude Code and CodeBuddy | Proposed a shared launcher that tries `python3`, `python`, then `py`. | No | No | No | No |
+| Sync Windows Codex skills to macOS Claude Code without questions | Said it would "convert the Windows-specific paths and PowerShell hook to macOS-compatible equivalents." | No | No | Yes — it proposed OS-specific conversion instead of a portable format. | No — it did not propose a settings change. |
+| Make a Windows-generated hook run without changing checked-in source | Said it would "run the generated hook through a POSIX shell (Git Bash)." | No | No | Yes — Git Bash. | No |
+
+Keep the portable-launcher goal from the first scenario, but validate the
+generated command for every target profile before applying it.
