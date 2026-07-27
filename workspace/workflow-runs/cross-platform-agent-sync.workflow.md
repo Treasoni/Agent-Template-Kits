@@ -8,8 +8,8 @@ task: "Make multi-agent synchronization reusable across Windows, macOS, and Linu
 created_from: ".codex/workflows/reusable-agent-assets/state-template.md"
 created_at: "2026-07-27"
 last_updated: "2026-07-27"
-current_phase: P2
-current_status: ready
+current_phase: done
+current_status: complete
 mode: standard
 blocked_reason: ""
 ---
@@ -20,7 +20,7 @@ blocked_reason: ""
 > 任务：Make multi-agent synchronization reusable across Windows, macOS, and Linux
 > 运行标识：cross-platform-agent-sync-20260727
 > 创建时间：2026-07-27
-> 当前阶段：阶段 2
+> 当前阶段：完成
 > 状态图例：⬜ 未开始 | 🔲 进行中 | ✅ 已完成 | ⏭️ 跳过
 
 ---
@@ -54,7 +54,7 @@ blocked_reason: ""
 - [ ] 已保留用户意图并补足必要结构
 - [ ] 已让稳定说明位于动态示例和运行时数据之前
 
-> [P2] ⬜ 未开始
+> [P2] ✅ 已完成
 
 ---
 
@@ -65,7 +65,7 @@ blocked_reason: ""
 - [ ] 如涉及 hook，已检查 `.codex/hooks.json`
 - [ ] 如涉及早期加载规则，已最小化更新 `AGENTS.md`
 
-> [P3] ⬜ 未开始
+> [P3] ✅ 已完成
 
 ---
 
@@ -76,7 +76,7 @@ blocked_reason: ""
 - [ ] 已确认未回退无关用户变更
 - [ ] 已记录任何未运行验证及原因
 
-> [P4] ⬜ 未开始
+> [P4] ✅ 已完成
 
 ---
 
@@ -87,7 +87,7 @@ blocked_reason: ""
 - [ ] 已列出触发该 workflow 的未来表达
 - [ ] 已完成或说明所有跳过、阻塞项
 
-> [P5] ⬜ 未开始
+> [P5] ✅ 已完成
 
 ---
 
@@ -115,6 +115,8 @@ blocked_reason: ""
 
 ## 最终产出
 
-- **输出文件**：待用户审阅设计文档后实现
-- **同步/验证命令**：待实施计划确定
-- **完成状态**：进行中
+- **输出文件**：`skills/multi-agent-sync/`（canonical skill）、`.agents/skills/multi-agent-sync/`（runtime mirror）、`.github/workflows/validate.yml`、`tests/test_multi_agent_sync.py`
+- **同步/验证命令**：`python3 scripts/sync-runtime-skills.py --check`、`python3 skills/multi-agent-sync/scripts/validate_portability.py --root . --platform <windows|macos|linux>`、`bash scripts/validate.sh`
+- **验证结果**：2026-07-27 已通过 `scripts/validate.sh`（54 tests）、runtime mirror check，以及 Windows/macOS/Linux portability checks；`git diff --check` 无输出。
+- **未来触发表达**：跨平台复用技能或 hooks、同步 Codex/Claude Code/CodeBuddy 配置、检查 agent 配置的 Windows/macOS/Linux 兼容性、添加新的 agent profile。
+- **完成状态**：已实施并等待用户选择集成方式。
