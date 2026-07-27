@@ -195,30 +195,6 @@ def sync_instructions(root: Path, source: dict[str, Any], target: dict[str, Any]
     return [Finding("DRIFT", f"{'updated' if actual is not None else 'created'}: {target_path.relative_to(root)}")]
 
 
-def sync_hook_config(root: Path, source: dict[str, Any], target: dict[str, Any], apply: bool) -> list[Finding]:
-    source_path = root / source["paths"]["hook_config"]
-    target_path = root / target["paths"]["hook_config"]
-    source_data = json.loads(source_path.read_text(encoding="utf-8"))
-    if not isinstance(source_data, dict) or "hooks" not in source_data:
-        raise ValueError(f"{source_path} must be a JSON object with a hooks key")
-    transformed_hooks = json.loads(transform(json.dumps(source_data["hooks"], ensure_ascii=False), source, target))
-    target_data: dict[str, Any] = {}
-    if target_path.exists():
-        current = json.loads(target_path.read_text(encoding="utf-8"))
-        if not isinstance(current, dict):
-            raise ValueError(f"{target_path} must be a JSON object")
-        target_data = current
-    target_data["hooks"] = transformed_hooks
-    expected = json.dumps(target_data, ensure_ascii=False, indent=2) + "\n"
-    actual = target_path.read_text(encoding="utf-8") if target_path.exists() else None
-    if actual == expected:
-        return []
-    if apply:
-        target_path.parent.mkdir(parents=True, exist_ok=True)
-        target_path.write_text(expected, encoding="utf-8")
-    return [Finding("DRIFT", f"{'updated' if actual is not None else 'created'}: {target_path.relative_to(root)}")]
-
-
 def quote_toml(value: str) -> str:
     return json.dumps(value, ensure_ascii=False)
 
@@ -310,7 +286,6 @@ def synchronize(root: Path, scopes: list[str], apply: bool, source_id: str | Non
                 findings.extend(sync_tree(root, root / source["paths"]["skills"], root / target["paths"]["skills"], source, target, profiles, apply, skill_mode=True))
             elif scope == "hooks":
                 findings.extend(sync_tree(root, root / source["paths"]["hooks"], root / target["paths"]["hooks"], source, target, profiles, apply))
-                findings.extend(sync_hook_config(root, source, target, apply))
             else:
                 findings.extend(sync_tree(root, root / source["paths"][scope], root / target["paths"][scope], source, target, profiles, apply))
     return findings

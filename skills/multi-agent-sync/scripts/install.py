@@ -18,10 +18,13 @@ def runtime_files(target: Path) -> list[tuple[Path, Path, bool]]:
     runtime = target / ".agent-sync"
     files = [
         (PACKAGE_ROOT / "scripts" / "sync_agents.py", runtime / "sync_agents.py", False),
+        (PACKAGE_ROOT / "scripts" / "bootstrap.py", runtime / "bootstrap.py", False),
         (PACKAGE_ROOT / "assets" / "mcp-servers.json", runtime / "mcp-servers.json", True),
     ]
     for profile in sorted((PACKAGE_ROOT / "profiles").glob("*.yaml")):
         files.append((profile, runtime / "agents" / profile.name, False))
+    for template in sorted((PACKAGE_ROOT / "assets" / "hook-templates").glob("*.json")):
+        files.append((template, runtime / "hook-templates" / template.name, False))
     return files
 
 
