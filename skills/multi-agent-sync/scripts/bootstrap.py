@@ -76,7 +76,9 @@ def _replace_matching_hook(
     if isinstance(entry, dict):
         command = entry.get("command")
         if isinstance(command, str) and any(path in command for path in paths):
-            return copy.deepcopy(replacement), True
+            merged = copy.deepcopy(entry)
+            merged.update(copy.deepcopy(replacement))
+            return merged, True
         for key, value in entry.items():
             rendered, replaced = _replace_matching_hook(value, paths, replacement)
             if replaced:

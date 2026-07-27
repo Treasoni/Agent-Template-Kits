@@ -201,6 +201,61 @@ class MultiAgentSyncTests(unittest.TestCase):
             "legacy-interpreter .codex/hooks/read_learnings.py",
         )
 
+    def test_bootstrap_preserves_unrelated_matching_hook_leaf_fields(self):
+        bootstrap = load_module("bootstrap_preserve_leaf_fields", "bootstrap.py")
+        desired = {
+            "hooks": {
+                "SessionStart": [
+                    {
+                        "matcher": "",
+                        "hooks": [
+                            {
+                                "type": "command",
+                                "command": "/opt/python .codex/hooks/read_learnings.py",
+                            }
+                        ],
+                    }
+                ]
+            }
+        }
+        current = {
+            "hooks": {
+                "SessionStart": [
+                    {
+                        "matcher": "",
+                        "hooks": [
+                            {
+                                "type": "command",
+                                "command": (
+                                    "legacy-interpreter "
+                                    ".codex/hooks/read_learnings.py"
+                                ),
+                                "timeout": 45,
+                                "label": "keep me",
+                            }
+                        ],
+                    }
+                ]
+            }
+        }
+
+        merged = bootstrap.merge_managed_hooks(current, desired)
+        managed_hook = merged["hooks"]["SessionStart"][0]["hooks"][0]
+
+        self.assertEqual(
+            managed_hook,
+            {
+                "type": "command",
+                "command": "/opt/python .codex/hooks/read_learnings.py",
+                "timeout": 45,
+                "label": "keep me",
+            },
+        )
+        self.assertEqual(
+            current["hooks"]["SessionStart"][0]["hooks"][0]["command"],
+            "legacy-interpreter .codex/hooks/read_learnings.py",
+        )
+
     def test_installed_bootstrap_applies_then_checks_host_local_hooks(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
