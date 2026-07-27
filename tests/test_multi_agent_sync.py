@@ -7,10 +7,11 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNTIME = ROOT / "skills/multi-agent-sync/scripts"
+PACKAGE = ROOT / "skills/multi-agent-sync"
 
 
 def load_module(name: str, filename: str):
@@ -20,6 +21,27 @@ def load_module(name: str, filename: str):
     sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def seed_declared_canonical_assets(root: Path):
+    sync = load_module("sync_agents_fixture", "sync_agents.py")
+    profiles = sync.load_profiles(root)
+    fixtures = {
+        "skills": ("fixture/SKILL.md", "# Fixture skill\n"),
+        "rules": ("shared.md", "# Shared rule\n"),
+        "hooks": ("read_learnings.py", "print('hook-ok')\n"),
+        "scripts": ("shared.py", "print('script-ok')\n"),
+        "workflows": ("fixture/workflow.md", "# Fixture workflow\n"),
+    }
+    for scope, (relative_path, content) in fixtures.items():
+        source = sync.source_for_scope(profiles, scope)
+        asset = root / source["paths"][scope] / relative_path
+        asset.parent.mkdir(parents=True, exist_ok=True)
+        asset.write_text(content, encoding="utf-8")
+        if scope == "rules":
+            instruction = root / source["paths"]["instructions"]
+            instruction.write_text("# Shared instructions\n", encoding="utf-8")
+    return sync, profiles
 
 
 class MultiAgentSyncTests(unittest.TestCase):
@@ -64,20 +86,70 @@ class MultiAgentSyncTests(unittest.TestCase):
         self.assertIn(".codebuddy/hooks/demo.py: absolute-path", findings)
         self.assertIn(".codebuddy/hooks/demo.py: shell-hook", findings)
 
-    def test_validator_reports_powershell_executable_command_and_shebang(self):
+    def test_validator_reports_powershell_and_pwsh_commands_and_shebangs(self):
         validator = load_module("validate_portability", "validate_portability.py")
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             command_hook = root / ".codex/hooks/command.py"
             shebang_hook = root / ".codex/hooks/shebang.py"
+            pwsh_command_hook = root / ".codex/hooks/pwsh-command.py"
+            pwsh_shebang_hook = root / ".codex/hooks/pwsh-shebang.py"
             command_hook.parent.mkdir(parents=True)
             command_hook.write_text("powershell.exe -File demo.ps1\n", encoding="utf-8")
             shebang_hook.write_text("#!/usr/bin/powershell.exe\n", encoding="utf-8")
+            pwsh_command_hook.write_text("pwsh -File demo.ps1\n", encoding="utf-8")
+            pwsh_shebang_hook.write_text("#!/usr/bin/pwsh.exe\n", encoding="utf-8")
 
             findings = validator.validate_tree(root, "windows")
 
         self.assertIn(".codex/hooks/command.py: shell-hook", findings)
         self.assertIn(".codex/hooks/shebang.py: shell-hook", findings)
+        self.assertIn(".codex/hooks/pwsh-command.py: shell-hook", findings)
+        self.assertIn(".codex/hooks/pwsh-shebang.py: shell-hook", findings)
+
+    def test_validator_ignores_binary_skill_assets(self):
+        validator = load_module("validate_portability_binary", "validate_portability.py")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            image = root / ".agents/skills/demo/assets/example.png"
+            image.parent.mkdir(parents=True)
+            image.write_bytes(
+                b"\x89PNG\r\n\x1a\n/Users/alice/project pwsh.exe C:\\Users\\alice"
+            )
+
+            findings = validator.validate_tree(root, "windows")
+
+        self.assertEqual(findings, [])
+
+    def test_validator_scans_toml_text_files(self):
+        validator = load_module("validate_portability_toml", "validate_portability.py")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = root / ".codex/rules/shared.toml"
+            config.parent.mkdir(parents=True)
+            config.write_bytes(b'project = "/Users/alice/project"\r\n')
+
+            findings = validator.validate_tree(root, "linux")
+
+        self.assertEqual(
+            findings,
+            [
+                ".codex/rules/shared.toml: crlf",
+                ".codex/rules/shared.toml: absolute-path",
+            ],
+        )
+
+    def test_validator_reports_invalid_utf8_in_recognized_text(self):
+        validator = load_module("validate_portability_encoding", "validate_portability.py")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            script = root / ".codex/scripts/shared.py"
+            script.parent.mkdir(parents=True)
+            script.write_bytes(b"print('ok')\n\xff")
+
+            findings = validator.validate_tree(root, "macos")
+
+        self.assertEqual(findings, [".codex/scripts/shared.py: invalid-utf8"])
 
     def test_validator_accepts_portable_sources_on_all_platforms_and_skips_local_outputs(self):
         validator = load_module("validate_portability", "validate_portability.py")
@@ -303,6 +375,8 @@ class MultiAgentSyncTests(unittest.TestCase):
                 text=True,
             )
             runtime = root / ".agent-sync"
+            sync, _ = seed_declared_canonical_assets(root)
+            sync.synchronize(root, list(sync.SCOPES), apply=True)
             subprocess.run(
                 [
                     sys.executable,
@@ -341,6 +415,42 @@ class MultiAgentSyncTests(unittest.TestCase):
                 command = settings["hooks"]["SessionStart"][0]["hooks"][0]["command"]
                 self.assertIn(sys.executable, command)
 
+    def test_bootstrap_rejects_missing_rendered_hook_scripts_before_writing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(RUNTIME / "install.py"),
+                    str(root),
+                    "--apply",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            runtime = root / ".agent-sync"
+
+            applied = subprocess.run(
+                [
+                    sys.executable,
+                    str(runtime / "bootstrap.py"),
+                    "--root",
+                    str(root),
+                    "--apply",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(applied.returncode, 2, applied.stderr + applied.stdout)
+            self.assertIn("hook script does not exist", applied.stderr)
+            self.assertFalse((runtime / "local/host.json").exists())
+            self.assertFalse((root / ".codex/hooks.json").exists())
+            self.assertFalse((root / ".claude/settings.json").exists())
+            self.assertFalse((root / ".codebuddy/settings.json").exists())
+
     def test_installed_runtime_bootstraps_and_checks_all_scopes(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -352,10 +462,7 @@ class MultiAgentSyncTests(unittest.TestCase):
                 text=True,
             )
             runtime = root / ".agent-sync"
-            source_hook = root / ".codex/hooks/read_learnings.py"
-            source_hook.parent.mkdir(parents=True)
-            source_hook.write_bytes(b"print('ok')\n")
-            self.assertEqual(source_hook.read_bytes(), b"print('ok')\n")
+            sync, profiles = seed_declared_canonical_assets(root)
             subprocess.run(
                 [
                     sys.executable,
@@ -392,6 +499,51 @@ class MultiAgentSyncTests(unittest.TestCase):
                 capture_output=True,
                 text=True,
             )
+            bootstrap_checked = subprocess.run(
+                [
+                    sys.executable,
+                    str(runtime / "bootstrap.py"),
+                    "--root",
+                    str(root),
+                    "--check",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(
+                bootstrap_checked.returncode,
+                0,
+                bootstrap_checked.stderr + bootstrap_checked.stdout,
+            )
+            for profile in profiles:
+                hook_script = (
+                    root
+                    / profile["paths"]["hooks"]
+                    / "read_learnings.py"
+                )
+                self.assertTrue(hook_script.is_file(), hook_script)
+                config = root / profile["paths"]["hook_config"]
+                settings = json.loads(config.read_text(encoding="utf-8"))
+                command = settings["hooks"]["SessionStart"][0]["hooks"][0]["command"]
+                expected_script = str(
+                    PurePosixPath(profile["paths"]["hooks"]) / "read_learnings.py"
+                )
+                self.assertIn(expected_script, command)
+                exercised = subprocess.run(
+                    command,
+                    cwd=root,
+                    shell=True,
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(
+                    exercised.returncode,
+                    0,
+                    exercised.stderr + exercised.stdout,
+                )
+                self.assertIn("hook-ok", exercised.stdout)
             checked = subprocess.run(
                 [
                     sys.executable,
@@ -406,6 +558,19 @@ class MultiAgentSyncTests(unittest.TestCase):
 
         self.assertEqual(checked.returncode, 0, checked.stderr + checked.stdout)
 
+    def test_built_in_profiles_use_existing_codex_roots_for_all_shared_scopes(self):
+        sync = load_module("sync_agents_builtin_ownership", "sync_agents.py")
+        profiles = [
+            sync.load_profile(path)
+            for path in sorted((PACKAGE / "profiles").glob("*.yaml"))
+        ]
+
+        for scope in ("skills", "rules", "hooks", "scripts", "workflows"):
+            with self.subTest(scope=scope):
+                source = sync.source_for_scope(profiles, scope)
+                self.assertEqual(source["id"], "codex")
+                self.assertTrue((ROOT / source["paths"][scope]).is_dir())
+
     def test_source_for_scope_uses_scope_override_then_global_default(self):
         sync = load_module("sync_agents", "sync_agents.py")
         codex = {"id": "codex", "canonical": True, "canonical_scopes": "skills,rules"}
@@ -414,6 +579,123 @@ class MultiAgentSyncTests(unittest.TestCase):
         self.assertEqual(sync.source_for_scope([codex, claude], "skills")["id"], "codex")
         self.assertEqual(sync.source_for_scope([codex, claude], "hooks")["id"], "claude")
         self.assertEqual(sync.source_for_scope([codex, claude], "rules", "claude")["id"], "claude")
+
+    def test_synchronize_rejects_a_missing_canonical_scope_root(self):
+        sync = load_module("sync_agents_missing_root", "sync_agents.py")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(RUNTIME / "install.py"),
+                    str(root),
+                    "--apply",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+            with self.assertRaisesRegex(
+                ValueError,
+                r"canonical hooks root does not exist",
+            ):
+                sync.synchronize(root, ["hooks"], apply=False)
+
+    def test_profile_paths_must_be_safe_project_relative_posix_paths(self):
+        sync = load_module("sync_agents_profile_paths", "sync_agents.py")
+        valid_profile = (PACKAGE / "profiles/codex.yaml").read_text(encoding="utf-8")
+        invalid_values = {
+            "empty": '""',
+            "posix-absolute": "/outside/hooks",
+            "parent-component": ".codex/../outside",
+            "backslash": r".codex\hooks",
+            "windows-absolute": "C:/outside/hooks",
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            profile_path = Path(directory) / "codex.yaml"
+            for case, invalid_value in invalid_values.items():
+                with self.subTest(case=case):
+                    profile_path.write_text(
+                        valid_profile.replace(
+                            "  hooks: .codex/hooks",
+                            f"  hooks: {invalid_value}",
+                        ),
+                        encoding="utf-8",
+                    )
+                    with self.assertRaisesRegex(ValueError, r"paths\.hooks"):
+                        sync.load_profile(profile_path)
+
+    def test_invalid_profile_path_prevents_all_sync_writes(self):
+        sync = load_module("sync_agents_profile_write_guard", "sync_agents.py")
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            root = base / "project"
+            root.mkdir()
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(RUNTIME / "install.py"),
+                    str(root),
+                    "--apply",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            for hook_root in (root / ".codex/hooks", root / ".claude/hooks"):
+                hook_root.mkdir(parents=True)
+                (hook_root / "read_learnings.py").write_text(
+                    "print('hook-ok')\n",
+                    encoding="utf-8",
+                )
+            profile_path = root / ".agent-sync/agents/codebuddy.yaml"
+            profile_path.write_text(
+                profile_path.read_text(encoding="utf-8").replace(
+                    "  hooks: .codebuddy/hooks",
+                    "  hooks: ../outside-hooks",
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ValueError, r"paths\.hooks"):
+                sync.synchronize(root, ["hooks"], apply=True)
+
+            self.assertFalse((base / "outside-hooks").exists())
+
+    def test_from_requires_an_explicit_scope(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(RUNTIME / "install.py"),
+                    str(root),
+                    "--apply",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+            checked = subprocess.run(
+                [
+                    sys.executable,
+                    str(root / ".agent-sync/sync_agents.py"),
+                    "--root",
+                    str(root),
+                    "--from",
+                    "codex",
+                    "--check",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(checked.returncode, 2, checked.stderr + checked.stdout)
+        self.assertIn("--from requires at least one --scope", checked.stderr)
 
     def test_hooks_scope_syncs_scripts_without_copying_profile_settings(self):
         sync = load_module("sync_agents", "sync_agents.py")
@@ -430,18 +712,18 @@ class MultiAgentSyncTests(unittest.TestCase):
                 capture_output=True,
                 text=True,
             )
-            (root / ".claude/hooks").mkdir(parents=True)
-            (root / ".claude/hooks/read_learnings.py").write_text(
-                "print('Claude Code hook')\n",
+            (root / ".codex/hooks").mkdir(parents=True)
+            (root / ".codex/hooks/read_learnings.py").write_text(
+                "print('Codex hook')\n",
                 encoding="utf-8",
             )
-            (root / ".claude/settings.json").write_text(
+            (root / ".codex/hooks.json").write_text(
                 '{"hooks": {"SessionStart": [{"hooks": [{"command": "source"}]}]}}\n',
                 encoding="utf-8",
             )
             target_settings = {"theme": "dark", "hooks": {"Custom": [{"command": "keep"}]}}
             for config in (
-                root / ".codex/hooks.json",
+                root / ".claude/settings.json",
                 root / ".codebuddy/settings.json",
             ):
                 config.parent.mkdir(parents=True, exist_ok=True)
@@ -452,10 +734,10 @@ class MultiAgentSyncTests(unittest.TestCase):
 
             sync.synchronize(root, ["hooks"], apply=True)
 
-            self.assertTrue((root / ".codex/hooks/read_learnings.py").is_file())
+            self.assertTrue((root / ".claude/hooks/read_learnings.py").is_file())
             self.assertTrue((root / ".codebuddy/hooks/read_learnings.py").is_file())
             self.assertEqual(
-                json.loads((root / ".codex/hooks.json").read_text(encoding="utf-8")),
+                json.loads((root / ".claude/settings.json").read_text(encoding="utf-8")),
                 target_settings,
             )
             self.assertEqual(

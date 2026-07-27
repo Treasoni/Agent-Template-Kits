@@ -31,13 +31,12 @@ The bundled profiles currently declare these owners:
 
 | Area | Canonical source | Generated targets |
 | --- | --- | --- |
-| `skills`, `rules` | Codex profile paths | Claude Code and CodeBuddy profile paths |
-| `hooks` | Claude Code profile path | Codex and CodeBuddy profile paths |
-| `scripts`, `workflows` | CodeBuddy profile paths | Codex and Claude Code profile paths |
+| `skills`, `rules`, `hooks`, `scripts`, `workflows` | Codex profile paths | Claude Code and CodeBuddy profile paths |
 | `mcp` | `.agent-sync/mcp-servers.json` | Profile-specific MCP files |
 
 Never infer ownership from the currently active agent. A command-line
-`--from <agent-id>` override applies only to the requested scope.
+`--from <agent-id>` override requires at least one explicit `--scope` and
+applies only to the requested non-MCP scopes.
 
 ## Install and launch
 
@@ -83,13 +82,19 @@ python3 "$skill_dir/scripts/validate_portability.py" --root "$project" --platfor
 ```
 
 Use `--platform linux` for a Linux handoff. When promoting an already changed
-target for one area, add `--from <agent-id>` to both the scoped check and apply.
-If a `SKILL.md` changed, refresh the target project's skill registry with that
-project's registry command after synchronization.
+target for one or more areas, add `--from <agent-id>` and an explicit `--scope`
+for every area to both the scoped check and apply. If a `SKILL.md` changed,
+refresh the target project's skill registry with that project's registry
+command after synchronization.
 
 ## Safety rules
 
 - Do not edit generated target copies as a source of truth.
+- A requested canonical source directory must already exist; a missing source
+  root is an error, not an empty synchronization.
+- Every profile path must be a nonempty project-relative POSIX path. Absolute
+  paths, `..` components, and backslashes are rejected before synchronization
+  or bootstrap can write files.
 - Keep credentials out of `mcp-servers.json`; use environment-variable references.
 - Preserve target-only files and non-hook settings. Synchronization never
   deletes target files, and bootstrap replaces only the managed Python hook

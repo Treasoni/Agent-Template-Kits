@@ -11,6 +11,11 @@
 `bootstrap.py --apply` 和 `bootstrap.py --check`，最后使用
 `validate_portability.py` 检查交付目标平台。
 
+内置 profile 的 `skills`、`rules`、`hooks`、`scripts` 和 `workflows`
+规范来源均为 Codex 路径，因为仓库实际提交了这些源目录。自定义 profile
+仍可用 `canonical_scopes` 改写单个 scope 的所有者。使用 `--from` 时必须
+同时显式提供至少一个 `--scope`。
+
 不同操作系统使用各自的原生 Python 3 启动方式：
 
 | 系统 | 启动命令 |
@@ -34,6 +39,12 @@ python3 .agent-sync/bootstrap.py --root . --check
 Windows 对应命令将每个 `python3` 替换为 `py -3`。完整同步步骤、`--from`
 的范围限制和跨平台 rationalization 见
 `skills/multi-agent-sync/SKILL.md`。
+
+同步器会在写入前验证所有 profile 路径：路径必须非空、相对项目根目录并
+使用 POSIX `/`，不得使用绝对路径、`..` 或反斜杠。任何请求 scope 的规范
+源目录缺失都会直接报错。portability validator 仅把 `.md`、`.py`、
+`.json`、`.yaml`、`.yml`、`.toml`、`.sh` 和 `.txt` 当作 UTF-8 文本；
+PNG 等二进制 skill 资源按原样忽略。
 
 ## Agent Profile Model
 

@@ -7,11 +7,11 @@ import argparse
 import json
 import sys
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any, Iterable
 
 
-TEXT_SUFFIXES = {".md", ".py", ".sh", ".json", ".yaml", ".yml", ".txt"}
+TEXT_SUFFIXES = {".md", ".py", ".sh", ".json", ".yaml", ".yml", ".toml", ".txt"}
 PRIVATE_SKILL_PARTS = {"agents"}
 MCP_BEGIN = "# BEGIN agent-sync:mcp"
 MCP_END = "# END agent-sync:mcp"
@@ -33,6 +33,25 @@ def yaml_scalar(value: str) -> Any:
         return False
     if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
         return value[1:-1]
+    return value
+
+
+def validate_profile_path(value: Any, *, label: str) -> str:
+    """Return a safe project-relative POSIX profile path."""
+
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{label} must be a non-empty project-relative POSIX path")
+    if "\\" in value:
+        raise ValueError(f"{label} must use forward slashes")
+    if "\x00" in value:
+        raise ValueError(f"{label} contains an invalid null byte")
+
+    posix_path = PurePosixPath(value)
+    windows_path = PureWindowsPath(value)
+    if not posix_path.parts or posix_path.is_absolute() or windows_path.drive:
+        raise ValueError(f"{label} must be a project-relative POSIX path")
+    if ".." in posix_path.parts:
+        raise ValueError(f"{label} must not contain '..'")
     return value
 
 
@@ -69,6 +88,11 @@ def load_profile(path: Path) -> dict[str, Any]:
         raise ValueError(f"{path}: missing " + ", ".join(missing))
     if not isinstance(profile["id"], str) or not profile["id"]:
         raise ValueError(f"{path}: id must be a non-empty string")
+    for key in sorted(paths):
+        paths[key] = validate_profile_path(
+            paths[key],
+            label=f"{path}: paths.{key}",
+        )
     canonical_scopes = profile.get("canonical_scopes", "")
     if not isinstance(canonical_scopes, str):
         raise ValueError(f"{path}: canonical_scopes must be a comma-separated string")
@@ -273,12 +297,25 @@ def sync_mcp(root: Path, profiles: list[dict[str, Any]], apply: bool) -> list[Fi
 
 def synchronize(root: Path, scopes: list[str], apply: bool, source_id: str | None = None) -> list[Finding]:
     profiles = load_profiles(root)
+    sources: dict[str, dict[str, Any]] = {}
+    for scope in scopes:
+        if scope == "mcp":
+            continue
+        source = source_for_scope(profiles, scope, source_id)
+        source_root = root / source["paths"][scope]
+        if not source_root.is_dir():
+            raise ValueError(
+                f"{source['id']}: canonical {scope} root does not exist: "
+                f"{source['paths'][scope]}"
+            )
+        sources[scope] = source
+
     findings: list[Finding] = []
     for scope in scopes:
         if scope == "mcp":
             findings.extend(sync_mcp(root, profiles, apply))
             continue
-        source = source_for_scope(profiles, scope, source_id)
+        source = sources[scope]
         targets = [profile for profile in profiles if profile is not source]
         for target in targets:
             if scope == "rules":
@@ -303,6 +340,8 @@ def main(argv: Iterable[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.apply and args.check:
         parser.error("--apply and --check cannot be used together")
+    if args.source_id and not args.scope:
+        parser.error("--from requires at least one --scope")
     try:
         findings = synchronize(Path(args.root).resolve(), args.scope or list(SCOPES), args.apply, args.source_id)
     except (OSError, ValueError, json.JSONDecodeError) as error:

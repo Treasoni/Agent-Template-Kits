@@ -25,9 +25,10 @@ SCANNER_IMPLEMENTATIONS = {
 }
 SCANNER_IMPLEMENTATIONS.add(Path(".agent-sync/validate_portability.py"))
 PLATFORMS = ("windows", "macos", "linux")
+TEXT_SUFFIXES = {".md", ".py", ".json", ".yaml", ".yml", ".toml", ".sh", ".txt"}
 ABSOLUTE_PATH = re.compile(r"/Users/|/home/|(?<![A-Za-z0-9_])[A-Za-z]:[\\/]")
-SHELL_SHEBANG = re.compile(r"^#!.*\b(?:zsh|bash|sh|cmd(?:\.exe)?|powershell(?:\.exe)?)(?:\s|$)", re.IGNORECASE)
-SHELL_COMMAND = re.compile(r"(?<![A-Za-z0-9_.-])(?:zsh|bash|cmd\.exe|powershell(?:\.exe)?)(?![A-Za-z0-9_.-])", re.IGNORECASE)
+SHELL_SHEBANG = re.compile(r"^#!.*\b(?:zsh|bash|sh|cmd(?:\.exe)?|powershell(?:\.exe)?|pwsh(?:\.exe)?)(?:\s|$)", re.IGNORECASE)
+SHELL_COMMAND = re.compile(r"(?<![A-Za-z0-9_.-])(?:zsh|bash|cmd\.exe|powershell(?:\.exe)?|pwsh(?:\.exe)?)(?![A-Za-z0-9_.-])", re.IGNORECASE)
 
 
 def candidate_files(root: Path) -> Iterable[tuple[Path, Path]]:
@@ -63,12 +64,18 @@ def validate_tree(root: Path, platform_name: str) -> list[str]:
 
     findings: list[str] = []
     for relative_path, path in candidate_files(root):
+        if path.suffix.lower() not in TEXT_SUFFIXES:
+            continue
         content = path.read_bytes()
         display_path = relative_path.as_posix()
         if b"\r\n" in content:
             findings.append(f"{display_path}: crlf")
 
-        text = content.decode("utf-8", errors="replace")
+        try:
+            text = content.decode("utf-8")
+        except UnicodeDecodeError:
+            findings.append(f"{display_path}: invalid-utf8")
+            continue
         if ABSOLUTE_PATH.search(text):
             findings.append(f"{display_path}: absolute-path")
         if is_hook(relative_path) and (SHELL_SHEBANG.search(text) or SHELL_COMMAND.search(text)):

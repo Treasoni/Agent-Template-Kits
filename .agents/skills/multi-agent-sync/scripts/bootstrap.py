@@ -192,6 +192,18 @@ def desired_outputs(
             python_executable=sys.executable,
             hook_script=hook_script,
         )
+        for rendered_script in sorted(_hook_script_paths(desired)):
+            script_path = PurePosixPath(rendered_script)
+            if script_path.is_absolute() or ".." in script_path.parts:
+                raise ValueError(
+                    f"{profile['id']}: rendered hook script must be project-relative: "
+                    f"{rendered_script}"
+                )
+            if not (root / script_path).is_file():
+                raise ValueError(
+                    f"{profile['id']}: rendered hook script does not exist: "
+                    f"{rendered_script}"
+                )
         config_path = root / profile["paths"]["hook_config"]
         current = _load_json_object(config_path, missing_ok=True)
         outputs.append((config_path, merge_managed_hooks(current, desired)))

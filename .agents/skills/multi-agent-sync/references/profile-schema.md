@@ -35,9 +35,9 @@ this order:
 2. the one profile whose `canonical_scopes` contains that scope;
 3. the one profile whose `canonical` value is `true`.
 
-Do not use `--from` without `--scope`: the override is intentionally limited to
-one area. MCP is the exception to profile ownership and always comes from
-`.agent-sync/mcp-servers.json`.
+Do not use `--from` without at least one explicit `--scope`: the override is
+intentionally limited to the named non-MCP areas. MCP is the exception to
+profile ownership and always comes from `.agent-sync/mcp-servers.json`.
 
 `paths.hook_config` names a host-local generated settings file. Keep that file
 ignored by version control, and create it with `bootstrap.py --apply` after
@@ -47,5 +47,7 @@ managed Python hook command.
 
 Use a distinct project MCP path when the new Agent cannot consume `.mcp.json`.
 Extending the synchronizer for another MCP format is required before using a
-new `mcp_format` value. All profile paths must be project-relative and use
-forward slashes so the same profile works on Windows, macOS, and Linux.
+new `mcp_format` value. Every profile path must be nonempty, project-relative,
+and written with POSIX forward slashes. Absolute paths (including Windows drive
+paths), `..` components, and backslashes are rejected before any generated
+output is written.

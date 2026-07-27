@@ -27,9 +27,19 @@ jobs:
           New-Item -ItemType Directory -Force -Path $project | Out-Null
           python skills/multi-agent-sync/scripts/install.py $project --apply
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $hook = Join-Path $project ".codex/hooks/read_learnings.py"
-          New-Item -ItemType Directory -Force -Path (Split-Path $hook) | Out-Null
-          [System.IO.File]::WriteAllText($hook, "print('ok')`n")
+          $fixtures = @{
+            ".agents/skills/fixture/SKILL.md" = "# Fixture skill`n"
+            ".codex/rules/shared.md" = "# Shared rule`n"
+            ".codex/hooks/read_learnings.py" = "print('hook-ok')`n"
+            ".codex/scripts/shared.py" = "print('script-ok')`n"
+            ".codex/workflows/fixture/workflow.md" = "# Fixture workflow`n"
+            "AGENTS.md" = "# Shared instructions`n"
+          }
+          foreach ($fixture in $fixtures.GetEnumerator()) {
+            $path = Join-Path $project $fixture.Key
+            New-Item -ItemType Directory -Force -Path (Split-Path $path) | Out-Null
+            [System.IO.File]::WriteAllText($path, $fixture.Value)
+          }
           $sync = Join-Path $project ".agent-sync/sync_agents.py"
           $bootstrap = Join-Path $project ".agent-sync/bootstrap.py"
           $validator = Join-Path $project ".agent-sync/validate_portability.py"
