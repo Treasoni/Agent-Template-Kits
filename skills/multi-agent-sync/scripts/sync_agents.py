@@ -69,6 +69,12 @@ def load_profile(path: Path) -> dict[str, Any]:
         raise ValueError(f"{path}: missing " + ", ".join(missing))
     if not isinstance(profile["id"], str) or not profile["id"]:
         raise ValueError(f"{path}: id must be a non-empty string")
+    canonical_scopes = profile.get("canonical_scopes", "")
+    if not isinstance(canonical_scopes, str):
+        raise ValueError(f"{path}: canonical_scopes must be a comma-separated string")
+    invalid_scopes = scope_values(profile) - (set(SCOPES) - {"mcp"})
+    if invalid_scopes:
+        raise ValueError(f"{path}: canonical_scopes contains unsupported scopes: {', '.join(sorted(invalid_scopes))}")
     return profile
 
 
@@ -85,6 +91,27 @@ def load_profiles(root: Path) -> list[dict[str, Any]]:
     if len(canonicals) != 1:
         raise ValueError("exactly one agent profile must set canonical: true")
     return profiles
+
+
+def scope_values(profile: dict[str, Any]) -> set[str]:
+    raw = profile.get("canonical_scopes", "")
+    return {item.strip() for item in raw.split(",") if item.strip()}
+
+
+def source_for_scope(
+    profiles: list[dict[str, Any]], scope: str, source_id: str | None = None
+) -> dict[str, Any]:
+    if source_id is not None:
+        match = next((profile for profile in profiles if profile["id"] == source_id), None)
+        if match is None:
+            raise ValueError(f"unknown --from profile {source_id!r}")
+        return match
+    explicit = [profile for profile in profiles if scope in scope_values(profile)]
+    if len(explicit) == 1:
+        return explicit[0]
+    if len(explicit) > 1:
+        raise ValueError(f"exactly one profile must own canonical scope {scope!r}")
+    return next(profile for profile in profiles if profile["canonical"] is True)
 
 
 def transform(text: str, source: dict[str, Any], target: dict[str, Any]) -> str:
@@ -268,18 +295,13 @@ def sync_mcp(root: Path, profiles: list[dict[str, Any]], apply: bool) -> list[Fi
 
 def synchronize(root: Path, scopes: list[str], apply: bool, source_id: str | None = None) -> list[Finding]:
     profiles = load_profiles(root)
-    source = next(profile for profile in profiles if profile["canonical"] is True)
-    if source_id is not None:
-        source = next((profile for profile in profiles if profile["id"] == source_id), None)
-        if source is None:
-            known = ", ".join(profile["id"] for profile in profiles)
-            raise ValueError(f"unknown --from profile {source_id!r}; configured profiles: {known}")
-    targets = [profile for profile in profiles if profile is not source]
     findings: list[Finding] = []
     for scope in scopes:
         if scope == "mcp":
             findings.extend(sync_mcp(root, profiles, apply))
             continue
+        source = source_for_scope(profiles, scope, source_id)
+        targets = [profile for profile in profiles if profile is not source]
         for target in targets:
             if scope == "rules":
                 findings.extend(sync_tree(root, root / source["paths"]["rules"], root / target["paths"]["rules"], source, target, profiles, apply))

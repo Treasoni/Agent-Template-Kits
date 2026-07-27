@@ -1,6 +1,7 @@
 id: claude
 name: Claude Code
 canonical: false
+canonical_scopes: hooks
 mcp_format: project-json
 paths:
   skills: .claude/skills

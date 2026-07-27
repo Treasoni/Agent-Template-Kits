@@ -1,6 +1,7 @@
 id: codebuddy
 name: CodeBuddy
 canonical: false
+canonical_scopes: scripts,workflows
 mcp_format: project-json
 paths:
   skills: .codebuddy/skills
