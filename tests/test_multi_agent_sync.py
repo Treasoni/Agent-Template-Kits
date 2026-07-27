@@ -23,6 +23,76 @@ def load_module(name: str, filename: str):
 
 
 class MultiAgentSyncTests(unittest.TestCase):
+    def test_validator_reports_absolute_path_shell_hook_and_crlf(self):
+        validator = load_module("validate_portability", "validate_portability.py")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            hook = root / ".codex/hooks/demo.py"
+            hook.parent.mkdir(parents=True)
+            hook.write_bytes(b"#!/usr/bin/env bash\r\nopen /Users/alice/file\r\n")
+
+            findings = validator.validate_tree(root, "windows")
+
+        self.assertTrue(any("absolute-path" in finding for finding in findings))
+        self.assertTrue(any("shell-hook" in finding for finding in findings))
+        self.assertTrue(any("crlf" in finding for finding in findings))
+
+    def test_validator_reports_shell_shebang_and_windows_drive_path(self):
+        validator = load_module("validate_portability", "validate_portability.py")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            hook = root / ".codebuddy/hooks/demo.py"
+            hook.parent.mkdir(parents=True)
+            hook.write_text("#!/bin/sh\nC:\\Users\\alice\\demo.py\n", encoding="utf-8")
+
+            findings = validator.validate_tree(root, "linux")
+
+        self.assertIn(".codebuddy/hooks/demo.py: absolute-path", findings)
+        self.assertIn(".codebuddy/hooks/demo.py: shell-hook", findings)
+
+    def test_validator_accepts_portable_sources_on_all_platforms_and_skips_local_outputs(self):
+        validator = load_module("validate_portability", "validate_portability.py")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            hook = root / ".codex/hooks/demo.py"
+            hook.parent.mkdir(parents=True)
+            hook.write_text("#!/usr/bin/env python3\nprint('ok')\n", encoding="utf-8")
+
+            generated_config = root / ".codex/hooks.json"
+            generated_config.write_bytes(b'{"command": "C:\\\\Users\\\\alice\\\\python.exe"}\r\n')
+            local_state = root / ".agent-sync/local/host.json"
+            local_state.parent.mkdir(parents=True)
+            local_state.write_bytes(b'{"python": "/Users/alice/python"}\r\n')
+
+            for platform_name in ("windows", "macos", "linux"):
+                self.assertEqual(validator.validate_tree(root, platform_name), [])
+
+    def test_validator_cli_returns_one_for_invalid_source_on_each_platform(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            hook = root / ".claude/hooks/demo.py"
+            hook.parent.mkdir(parents=True)
+            hook.write_text("powershell -File demo.ps1\n", encoding="utf-8")
+
+            for platform_name in ("windows", "macos", "linux"):
+                checked = subprocess.run(
+                    [
+                        sys.executable,
+                        str(RUNTIME / "validate_portability.py"),
+                        "--root",
+                        str(root),
+                        "--platform",
+                        platform_name,
+                    ],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                )
+
+                self.assertEqual(checked.returncode, 1, checked.stderr + checked.stdout)
+                self.assertIn(".claude/hooks/demo.py", checked.stdout)
+                self.assertIn("shell-hook", checked.stdout)
+
     def test_bootstrap_renders_current_python_and_preserves_other_settings(self):
         bootstrap = load_module("bootstrap", "bootstrap.py")
         desired = bootstrap.render_hook_template(
