@@ -240,6 +240,15 @@ cd "$TARGET"
 
 检查脚本不会自动创建 `.env.example`；目标项目需要先准备自己的最小环境变量模板。默认模式会阻止缺失变量和可疑凭证；`--strict` 还会把未被代码引用的模板变量视为失败。详见 [templates/env/README.md](templates/env/README.md)。
 
+本仓库自身的 `.env.example` 包含以下变量：
+
+| 变量 | 默认值 | 用途 |
+| --- | --- | --- |
+| `PYTHON` | `python3` | Python 解释器路径，Windows 下自动检测 `py -3` 或 `python.exe` |
+| `PROMPT_CACHE_ASSET_DIR` | 空（使用内置资源） | 提示缓存观测 schema 与回归样本的自定义路径 |
+| `PROMPT_CACHE_PROFILE_ROOT` | 空 | 独立安装器副本使用的 profile-contract 位置 |
+| `WORKFLOW_PROFILE_ROOT` | 空 | 独立安装器副本使用的 workflow profile-contract 位置 |
+
 ### 可恢复 Workflow
 
 ```bash
@@ -294,7 +303,18 @@ python3 "$TARGET/.agent-sync/sync_agents.py" --root "$TARGET" --check --scope sk
 python3 "$TARGET/.agent-sync/sync_agents.py" --root "$TARGET" --apply --scope skills
 ```
 
-该 runtime 默认以 Codex 为 canonical profile，并包含 Codex、Claude Code 和 CodeBuddy 的路径合同。可在 `.agent-sync/agents/` 添加已受支持的 Agent profile。详见 [skills/multi-agent-sync/SKILL.md](skills/multi-agent-sync/SKILL.md)。
+该 runtime 默认以 Codex 为 canonical profile，并包含 Codex、Claude Code 和 CodeBuddy 的路径合同。可在 `.agent-sync/agents/` 添加已受支持的 Agent profile。
+
+安装后，需为本机生成 hooks 配置文件：
+
+```bash
+cd "$TARGET"
+python3 .agent-sync/scripts/bootstrap.py --apply
+```
+
+这会根据 hook 模板创建各 Agent 的 `hooks.json` 或 `settings.json`（写入当前主机的 Python 解释器路径）。这些文件已在 `.gitignore` 中，不会提交到版本控制。后续在另一台机器克隆时需重新执行此步骤。
+
+详见 [skills/multi-agent-sync/SKILL.md](skills/multi-agent-sync/SKILL.md)。
 
 ### Manifest Platform
 
@@ -337,6 +357,7 @@ AUDITOR="$PWD/skills/security-secret-audit/scripts/audit-secrets.sh"
 
 ```yaml
 name: myagent
+description: "Custom profile for MyAgent projects."
 agent_dir: .my-agent
 skills_dir: .my-agent/skills
 rules_dir: .my-agent/rules
@@ -347,6 +368,8 @@ hook_config: ""
 hook_template: ""
 include_openai_yaml: false
 env_template: codex
+skill_registry: .my-agent/rules/common/skill-invocation.md
+prompt_cache_rule: .my-agent/rules/common/prompt-cache.md
 ```
 
 然后运行：
@@ -435,7 +458,20 @@ skills/security-secret-audit/scripts/audit-secrets.sh
 git diff --check
 ```
 
-`scripts/validate.sh` 包含语法检查、临时目录安装 smoke test 和 `tests/` 回归测试。GitHub Actions 会对 push 到 `main` 和 pull request 执行同类检查。
+`scripts/validate.sh` 包含语法检查、临时目录安装 smoke test 和 `tests/` 回归测试。GitHub Actions 会对 push 到 `main` 和 pull request 执行同类检查（覆盖 Ubuntu、macOS、Windows 三平台）。
+
+其他辅助验证脚本：
+
+```bash
+# 验证 profile YAML 合同完整性
+python3 scripts/validate-profiles.py
+
+# 验证文档覆盖所有组件
+python3 scripts/check-docs.py
+
+# 将 skills/ 中规范源同步到 .agents/skills/（自身使用）
+python3 scripts/sync-runtime-skills.py
+```
 
 目标项目已有 `.env.example` 时，可验证 Codex 安装内容：
 
@@ -464,9 +500,11 @@ target-project/
 │   └── workflows/
 ├── .learnings/
 ├── workspace/workflow-runs/
-├── .codex/hooks.json
+├── .codex/hooks.json          # 由 bootstrap.py 生成（gitignored，每台主机不同）
 └── AGENTS.md
 ```
+
+`.codex/hooks.json` 是受忽略的主机本地文件，由多 Agent 同步 runtime 的 `bootstrap.py` 自动生成（写入当前主机的 Python 解释器路径）。在克隆仓库后需先安装 `.agent-sync` 并执行 `bootstrap.py --apply` 生成该文件，而非手动提交。
 
 仅在项目已接通自动 LLM usage 采集时，才会额外出现 `/.llm/prompt-cache/`。
 
@@ -476,17 +514,19 @@ target-project/
 profiles/       内置 Agent 布局合同
 templates/      可安装的规则、hook 和初始文件
 skills/         可独立分发的 skill 包和工具
-.agents/        本仓库自身使用的 Codex skills
+.agents/        本仓库自身使用的 Codex skills（由 sync-runtime-skills.py 同步 skills/ 镜像）
 .codex/         本仓库自身使用的 rules、hooks 和 workflows
-scripts/        仓库级验证命令
+.agent-sync/    多 Agent 同步 runtime
+scripts/        仓库级验证命令（validate.sh、install.py、sync-runtime-skills.py 等）
 tests/          安装、升级和状态转移回归测试
-docs/           便携性和第三方 Agent 接入说明
+docs/           便携性说明 + 设计方案（superpowers/）+ 完整功能文档
 ```
 
 ## 进一步阅读
 
 - [更新说明](CHANGELOG.md)
 - [跨 Agent 与跨平台接入](docs/PORTABILITY.md)
+- [功能与使用文档（完整版）](docs/Agent%20Template%20Kits%20—%20功能与使用文档.md)
 - [Agent profile 字段说明](profiles/README.md)
 - [自学习模板](templates/self-learning/README.md)
 - [提示缓存模板](templates/cache/README.md)
