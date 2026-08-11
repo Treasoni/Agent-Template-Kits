@@ -19,7 +19,7 @@
 - 优化 LLM 提示缓存布局，安装观测 schema 和回归样本。
 - 将共享 Agent 配置同步到 Codex、Claude Code、CodeBuddy 等 profile，并检测漂移。
 - 安装 manifest registry，声明 workflow、skill、hook 等 Agent 资产的版本、能力与权限。
-- 在提交前扫描 API Key、Token、密码和私钥。
+- 在提交前扫描 API Key、Token、密码和私钥，并审查高置信度项目安全风险。
 
 ## 运行要求
 
@@ -347,9 +347,18 @@ AUDITOR="$PWD/skills/security-secret-audit/scripts/audit-secrets.sh"
 
 # 泄露排查：包含 Git 历史
 (cd "$TARGET" && "$AUDITOR" --all)
+
+# 项目安全审查：凭证泄漏 + 高置信度源码、配置和敏感文件风险
+(cd "$TARGET" && "$AUDITOR" --project)
+
+# CI 中使项目风险阻断构建；默认不扫描 Git 历史
+(cd "$TARGET" && "$AUDITOR" --project --strict)
+
+# 仅低风险修复：先输出预览，再补充受管的本地凭证忽略规则
+(cd "$TARGET" && "$AUDITOR" --project --fix)
 ```
 
-报告只包含文件、行号和规则名，不输出凭证原文。详见 [skills/security-secret-audit/SKILL.md](skills/security-secret-audit/SKILL.md)。
+报告只包含文件、行号和规则名，不输出凭证原文。默认项目风险只告警，`--strict` 才以退出码 `2` 阻断；凭证泄漏始终以 `2` 阻断。`--fix` 只会向 `.gitignore` 写入幂等的本地凭证忽略块，绝不删除凭证、轮换或撤销密钥、改写 Git 历史、暂存、提交或推送。详见 [skills/security-secret-audit/SKILL.md](skills/security-secret-audit/SKILL.md)。
 
 ## 6. 自定义 Agent
 

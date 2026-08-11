@@ -460,13 +460,19 @@ section { scroll-margin-top: 20px; }
 <span class="tok-comment"># 当前文件 / staged / Git 全历史</span>
 (<span class="tok-keyword">cd</span> <span class="tok-string">"$TARGET"</span> && <span class="tok-string">"$AUDITOR"</span>)
 (<span class="tok-keyword">cd</span> <span class="tok-string">"$TARGET"</span> && <span class="tok-string">"$AUDITOR"</span> <span class="tok-flag">--staged</span>)
-(<span class="tok-keyword">cd</span> <span class="tok-string">"$TARGET"</span> && <span class="tok-string">"$AUDITOR"</span> <span class="tok-flag">--all</span>)</pre>
+(<span class="tok-keyword">cd</span> <span class="tok-string">"$TARGET"</span> && <span class="tok-string">"$AUDITOR"</span> <span class="tok-flag">--all</span>)
+
+<span class="tok-comment"># 项目风险 / CI 严格模式 / 低风险修复</span>
+(<span class="tok-keyword">cd</span> <span class="tok-string">"$TARGET"</span> && <span class="tok-string">"$AUDITOR"</span> <span class="tok-flag">--project</span>)
+(<span class="tok-keyword">cd</span> <span class="tok-string">"$TARGET"</span> && <span class="tok-string">"$AUDITOR"</span> <span class="tok-flag">--project --strict</span>)
+(<span class="tok-keyword">cd</span> <span class="tok-string">"$TARGET"</span> && <span class="tok-string">"$AUDITOR"</span> <span class="tok-flag">--project --fix</span>)</pre>
 <table>
   <tr><th>退出码</th><th>含义</th></tr>
-  <tr><td><code>0</code></td><td>无发现，安全</td></tr>
-  <tr><td><code>2</code></td><td>发现潜在凭证，应阻止提交</td></tr>
+  <tr><td><code>0</code></td><td>无凭证发现；非严格项目风险作为待处理告警</td></tr>
+  <tr><td><code>2</code></td><td>发现潜在凭证，或严格模式下发现项目风险，应阻止提交</td></tr>
   <tr><td><code>1</code></td><td>扫描器错误，需排查</td></tr>
 </table>
+<p>项目审查覆盖禁用 TLS 校验、shell 命令执行、宽松 CORS、全局可写权限、敏感数据日志、被追踪的凭证文件和缺少本地凭证忽略规则。报告只显示位置和规则名。<code>--fix</code> 仅添加幂等 <code>.gitignore</code> 块，不会删除凭证、轮换密钥、改写历史、暂存、提交或推送。</p>
 
 <h3>7.7 多 Agent 同步</h3>
 <pre><span class="tok-comment"># 1. 安装 runtime</span>

@@ -6,7 +6,7 @@ agent profile's `skills_dir`.
 | Skill | Purpose |
 | --- | --- |
 | `prompt-cache-optimizer` | Audit prompt-cache layout, telemetry, and regression fixtures. |
-| `security-secret-audit` | Scan staged files, working trees, or history for exposed secrets. |
+| `security-secret-audit` | Scan staged files, working trees, or history for exposed secrets and high-confidence project-security risks. |
 | `sync-skill-registry` | Generate a skill invocation registry from `*/SKILL.md` metadata. |
 | `multi-agent-sync` | Synchronize shared skills and agent configuration across coding-agent profiles. |
 | `manifest-platform` | Install and validate portable `manifest.yaml` registries for agent artifacts. |

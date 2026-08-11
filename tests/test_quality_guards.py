@@ -99,6 +99,59 @@ class QualityGuardTests(unittest.TestCase):
         self.assertFalse(synthetic_key in result.stdout)
         self.assertFalse(synthetic_key in result.stderr)
 
+    def test_project_audit_reports_risks_and_strict_mode_blocks(self) -> None:
+        auditor = ROOT / "skills/security-secret-audit/scripts/audit-secrets.sh"
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            subprocess.run(["git", "init", "--quiet"], cwd=project, check=True)
+            source = "requests.get('https://example.invalid', verify=" + "False)\n"
+            (project / "app.py").write_text(source, encoding="utf-8")
+
+            warning = subprocess.run(
+                ["bash", str(auditor), "--project"],
+                cwd=project,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            strict = subprocess.run(
+                ["bash", str(auditor), "--project", "--strict"],
+                cwd=project,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+        self.assertEqual(warning.returncode, 0)
+        self.assertIn("untracked:app.py:1:transport-security-disabled", warning.stdout)
+        self.assertNotIn(source.strip(), warning.stdout)
+        self.assertEqual(strict.returncode, 2)
+        self.assertIn("Project security audit found blocking risks.", strict.stderr)
+
+    def test_project_audit_fix_previews_and_adds_ignore_block(self) -> None:
+        auditor = ROOT / "skills/security-secret-audit/scripts/audit-secrets.sh"
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            subprocess.run(["git", "init", "--quiet"], cwd=project, check=True)
+            result = subprocess.run(
+                ["bash", str(auditor), "--project", "--fix"],
+                cwd=project,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            gitignore = (project / ".gitignore").read_text(encoding="utf-8")
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("remediation-preview:.gitignore:0:append-local-credential-ignore-block", result.stdout)
+        self.assertIn("remediation-applied:.gitignore:0:append-local-credential-ignore-block", result.stdout)
+        self.assertIn("# security-secret-audit: local credentials", gitignore)
+        self.assertIn("!.env.example", gitignore)
+
 
 if __name__ == "__main__":
     unittest.main()

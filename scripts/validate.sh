@@ -79,6 +79,7 @@ bash -n \
 if command -v perl >/dev/null 2>&1; then
   log "perl syntax"
   perl -c skills/security-secret-audit/scripts/detect-secrets.pl >/dev/null
+  perl -c skills/security-secret-audit/scripts/detect-risks.pl >/dev/null
 fi
 
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/agent-template-kits-validate.XXXXXX")"

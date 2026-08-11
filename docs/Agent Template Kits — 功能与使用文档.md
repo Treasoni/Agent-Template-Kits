@@ -407,14 +407,25 @@ AUDITOR="$PWD/skills/security-secret-audit/scripts/audit-secrets.sh"
 
 # 泄露排查：包含 Git 历史
 (cd "$TARGET" && "$AUDITOR" --all)
+
+# 项目安全审查：凭证泄漏 + 高置信度源码、配置和敏感文件风险
+(cd "$TARGET" && "$AUDITOR" --project)
+
+# CI 阻断模式；默认不扫描 Git 历史
+(cd "$TARGET" && "$AUDITOR" --project --strict)
+
+# 先预览，再仅补充受管的本地凭证忽略规则
+(cd "$TARGET" && "$AUDITOR" --project --fix)
 ```
 
 **退出码：**
 | 退出码 | 含义 |
 |--------|------|
-| `0` | 无发现，安全 |
-| `2` | 发现潜在凭证，应阻止提交 |
+| `0` | 无凭证发现；非严格项目风险作为待处理告警 |
+| `2` | 发现潜在凭证，或 `--strict` 下发现项目风险，应阻止提交 |
 | `1` | 扫描器错误，需排查 |
+
+项目审查覆盖禁用 TLS 校验、shell 命令执行、宽松 CORS、全局可写权限、敏感数据日志、被追踪的凭证文件和缺少本地凭证忽略规则。报告只显示位置和规则名。`--fix` 仅添加幂等 `.gitignore` 块，不会删除凭证、轮换密钥、改写历史、暂存、提交或推送。
 
 ### 7.7 多 Agent 同步
 

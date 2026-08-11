@@ -19,6 +19,7 @@ MIRRORS = (
     (Path("skills/manifest-platform"), Path(".agents/skills/manifest-platform")),
     (Path("skills/multi-agent-sync"), Path(".agents/skills/multi-agent-sync")),
     (Path("skills/workflow-todo-state"), Path(".agents/skills/workflow-todo-state")),
+    (Path("skills/security-secret-audit"), Path(".agents/skills/security-secret-audit")),
     (Path("templates/self-learning/skills/maintain-learnings"), Path(".agents/skills/maintain-learnings")),
 )
 IGNORED_PARTS = {"__pycache__"}
