@@ -4,17 +4,18 @@
 
 ## Cross-Agent Synchronization
 
-`skills/multi-agent-sync/` 是可分发的规范包，`.agents/skills/multi-agent-sync/`
-是由 `scripts/sync-runtime-skills.py` 生成的 Codex runtime mirror。跨 profile
+`skills/multi-agent-sync/` 是可分发的 canonical package；本仓库的
+`.agents/skills/` 与 `.claude/skills/` 是由 `scripts/sync-runtime-skills.py`
+生成且 gitignored 的 runtime adapters。跨 profile
 同步时，先读取 `.agent-sync/agents/*.yaml` 确认每个 scope 的规范来源，再按
 `--check`、`--apply`、全量 `--check` 的顺序执行。同步完成后运行
 `bootstrap.py --apply` 和 `bootstrap.py --check`，最后使用
 `validate_portability.py` 检查交付目标平台。
 
-内置 profile 的 `skills`、`rules`、`hooks`、`scripts` 和 `workflows`
-规范来源均为 Codex 路径，因为仓库实际提交了这些源目录。自定义 profile
-仍可用 `canonical_scopes` 改写单个 scope 的所有者。使用 `--from` 时必须
-同时显式提供至少一个 `--scope`。
+安装到目标项目后，multi-agent-sync 默认以 Codex profile 作为共享配置来源，
+也可用 `canonical_scopes` 改写单个 scope 的所有者。这个目标项目运行时合同
+不改变本模板仓库以 `skills/` 为产品 source 的 ownership。使用 `--from` 时
+必须同时显式提供至少一个 `--scope`。
 
 不同操作系统使用各自的原生 Python 3 启动方式：
 
@@ -24,12 +25,12 @@
 | macOS | `python3 <script> <arguments>` |
 | Linux | `python3 <script> <arguments>` |
 
-安装后的 `.agent-sync/` 包含同步器、profile 和 hook 模板。仓库只跟踪可移植
-模板与 hook 脚本；`.codex/hooks.json`、`.claude/settings.json`、
-`.codebuddy/settings.json` 和 `.agent-sync/local/` 是 bootstrap 根据当前
-Python 解释器生成的本机文件，不应提交。fresh clone 上先安装 runtime：
+安装后的 `.agent-sync/` 包含同步器、profile 和 hook 模板。本模板仓库把整个
+`.agent-sync/` 视为本机生成内容；目标项目至少应忽略 host-local settings 和
+`.agent-sync/local/`。fresh clone 上先生成 skill runtime，再按需安装 sync runtime：
 
 ```bash
+python3 scripts/sync-runtime-skills.py --apply
 python3 skills/multi-agent-sync/scripts/install.py . --dry-run
 python3 skills/multi-agent-sync/scripts/install.py . --apply
 python3 .agent-sync/bootstrap.py --root . --apply

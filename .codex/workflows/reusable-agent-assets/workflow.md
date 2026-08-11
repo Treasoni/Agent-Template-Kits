@@ -20,7 +20,7 @@ Do not route here for read-only explanations, ordinary application feature work,
 Choose the narrowest durable home for each reusable asset. When the user says an asset must be reusable, portable, copied to other projects, or shared across projects, place the distributable source in a canonical source directory first; runtime mirrors are secondary generated outputs.
 
 - `skills/{skill-id}/` for distributable reusable agent skills with a `SKILL.md`, optional `references/`, `scripts/`, `assets/`, and `agents/openai.yaml`.
-- `.agents/skills/{skill-id}/` only for this repository's Codex runtime mirror. It must be synchronized from canonical source with `python3 scripts/sync-runtime-skills.py --apply` and verified with `python3 scripts/sync-runtime-skills.py --check`.
+- `.agents/skills/{skill-id}/`, `.claude/skills/{skill-id}/`, and other runtime adapters are gitignored generated outputs. Generate them from canonical packages with `python3 scripts/sync-runtime-skills.py --apply`; never edit or commit them as source.
 - Other profile runtime directories, such as `.claude/skills/{skill-id}/`, are not distributable sources. Use `multi-agent-sync` when cross-profile synchronization is configured.
 - `.codex/rules/{domain}/{rule-id}.md` for reusable project rules. Add only a short bootstrap pointer to `AGENTS.md` when the rule must be loaded before normal task work.
 - `.codex/workflows/{workflow-id}/` for recoverable multi-step workflows. Include `workflow.md`, `state-template.md`, and `routing.yaml`, then run `.codex/scripts/sync-workflow-routing.sh`.
@@ -60,7 +60,7 @@ Prefer kebab-case IDs, stable filenames, and concise descriptions. Preserve the 
 ### P3 Integrate Registries
 
 - If a workflow was created or changed, run `.codex/scripts/sync-workflow-routing.sh` and then `.codex/scripts/sync-workflow-routing.sh --check`.
-- If a shared runtime skill under `.agents/skills/` was changed, run `python3 scripts/sync-runtime-skills.py --check`.
+- If a canonical skill changed, run `python3 scripts/sync-runtime-skills.py --validate`; optionally regenerate local adapters with `--apply` and verify them with `--check`.
 - If a user explicitly requested reuse or portability for a skill, verify the canonical `skills/{skill-id}/` package exists before handoff.
 - If `.agent-sync/` is configured and a change must reach other Agent profiles, use `python3 .agent-sync/sync_agents.py --check --scope <scope>` before applying that affected scope. `maintain-learnings` does not synchronize profiles.
 - If a hook was added or changed, verify `.codex/hooks.json` still points at valid files.
@@ -80,4 +80,4 @@ Prefer kebab-case IDs, stable filenames, and concise descriptions. Preserve the 
 
 ## Completion Criteria
 
-The workflow is complete only when reusable assets are in their durable locations, required registries are synchronized, validation passes or failures are reported, and the active run state is complete.
+The workflow is complete only when reusable assets are in their durable locations, required registries are synchronized, every required validation passes, `quality_gate: passed` is recorded, and the active run state is complete. A known failing baseline keeps the run blocked; a temporary waiver requires both `quality_gate_owner` and `quality_gate_due`.

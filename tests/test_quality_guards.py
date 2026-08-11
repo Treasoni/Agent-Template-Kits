@@ -44,6 +44,9 @@ class QualityGuardTests(unittest.TestCase):
         checker = load_script("check_docs", "scripts/check-docs.py")
 
         self.assertEqual(checker.check_documents(checker.DOCUMENTS, checker.component_names()), [])
+        self.assertEqual(checker.check_local_links((checker.README, checker.GUIDE)), [])
+        self.assertEqual(checker.check_profile_table(checker.GUIDE), [])
+        self.assertEqual(checker.check_generated_html(), [])
 
     def test_document_guard_reports_missing_component(self) -> None:
         checker = load_script("check_docs", "scripts/check-docs.py")
@@ -145,12 +148,77 @@ class QualityGuardTests(unittest.TestCase):
             )
 
             gitignore = (project / ".gitignore").read_text(encoding="utf-8")
+            ignored = project / ".env.production"
+            allowed = (
+                project / ".env.template",
+                project / ".env.production.example",
+                project / ".env.local.sample",
+            )
+            ignored.write_text("", encoding="utf-8")
+            for path in allowed:
+                path.write_text("", encoding="utf-8")
+            ignored_result = subprocess.run(
+                ["git", "check-ignore", "--quiet", ignored.name],
+                cwd=project,
+                check=False,
+            )
+            allowed_results = [
+                subprocess.run(
+                    ["git", "check-ignore", "--quiet", path.name],
+                    cwd=project,
+                    check=False,
+                ).returncode
+                for path in allowed
+            ]
+            repeated = subprocess.run(
+                ["bash", str(auditor), "--project", "--fix"],
+                cwd=project,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
 
         self.assertEqual(result.returncode, 0)
         self.assertIn("remediation-preview:.gitignore:0:append-local-credential-ignore-block", result.stdout)
         self.assertIn("remediation-applied:.gitignore:0:append-local-credential-ignore-block", result.stdout)
         self.assertIn("# security-secret-audit: local credentials", gitignore)
         self.assertIn("!.env.example", gitignore)
+        self.assertEqual(ignored_result.returncode, 0)
+        self.assertEqual(allowed_results, [1, 1, 1])
+        self.assertEqual(repeated.returncode, 0)
+        self.assertIn("local-credential-ignore-block-already-present", repeated.stdout)
+
+    def test_project_only_options_require_project_mode(self) -> None:
+        auditor = ROOT / "skills/security-secret-audit/scripts/audit-secrets.sh"
+        for option in ("--fix", "--strict"):
+            with self.subTest(option=option), tempfile.TemporaryDirectory() as directory:
+                project = Path(directory)
+                subprocess.run(["git", "init", "--quiet"], cwd=project, check=True)
+                result = subprocess.run(
+                    ["bash", str(auditor), option],
+                    cwd=project,
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    check=False,
+                )
+
+            self.assertEqual(result.returncode, 2)
+            self.assertIn(f"{option} requires --project", result.stderr)
+
+    def test_repository_passes_strict_project_audit(self) -> None:
+        auditor = ROOT / "skills/security-secret-audit/scripts/audit-secrets.sh"
+        result = subprocess.run(
+            ["bash", str(auditor), "--project", "--strict"],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
 if __name__ == "__main__":

@@ -111,13 +111,19 @@ EOF
 # are only read from the environment remain in the referenced-variable set.
 rg -n --hidden --no-heading \
   -g '!.git/**' \
+  -g '!.agents/**' \
   -g '!.claude/**' \
+  -g '!.codebuddy/**' \
+  -g '!.learnings/**' \
+  -g '!.workbuddy/**' \
   -g '!node_modules/**' \
   -g '!dist/**' \
   -g '!build/**' \
   -g '!.next/**' \
   -g '!coverage/**' \
   -g '!workspace/**' \
+  -g '!docs/**' \
+  -g '!tests/**' \
   -g '!README.md' \
   -g '!.env' \
   -g '!.env.*' \
@@ -155,13 +161,19 @@ extract_vars() {
 
 rg -n --hidden --no-heading \
   -g '!.git/**' \
+  -g '!.agents/**' \
   -g '!.claude/**' \
+  -g '!.codebuddy/**' \
+  -g '!.learnings/**' \
+  -g '!.workbuddy/**' \
   -g '!node_modules/**' \
   -g '!dist/**' \
   -g '!build/**' \
   -g '!.next/**' \
   -g '!coverage/**' \
   -g '!workspace/**' \
+  -g '!docs/**' \
+  -g '!tests/**' \
   -g '!README.md' \
   -g '!.env' \
   -g '!.env.*' \

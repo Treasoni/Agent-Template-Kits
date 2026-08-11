@@ -5,12 +5,32 @@ from __future__ import annotations
 
 import argparse
 import shutil
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
 
 TEMPLATE_ROOT = Path(__file__).resolve().parent
 PROFILE_ROOT = TEMPLATE_ROOT.parent.parent / "profiles"
+REPOSITORY_SCRIPT_DIR = TEMPLATE_ROOT.parent.parent / "scripts"
+if str(REPOSITORY_SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_SCRIPT_DIR))
+
+try:
+    from profile_contract import load_profiles as load_profile_contracts, parse_flat_yaml  # noqa: E402
+except ModuleNotFoundError:
+    def parse_flat_yaml(path: Path) -> tuple[dict[str, str], list[str]]:
+        values: dict[str, str] = {}
+        for raw_line in path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if line and not line.startswith("#") and ":" in line:
+                key, value = line.split(":", 1)
+                values[key.strip()] = value.strip().strip('"\'')
+        return values, []
+
+    def load_profile_contracts(_profile_root: Path) -> dict[str, object]:
+        return {}
+
 LEGACY_START_MARKER = "<!-- env-template:begin -->"
 LEGACY_END_MARKER = "<!-- env-template:end -->"
 
@@ -34,32 +54,20 @@ class EnvProfile:
         return f"{self.scripts_dir}/check-env-template.sh"
 
 
-def parse_flat_yaml(path: Path) -> dict[str, str]:
-    values: dict[str, str] = {}
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or ":" not in line:
-            continue
-        key, value = line.split(":", 1)
-        values[key.strip()] = value.strip().strip('"\'')
-    return values
-
-
 def load_builtin_profiles() -> dict[str, EnvProfile]:
     profiles: dict[str, EnvProfile] = {}
-    for path in sorted(PROFILE_ROOT.glob("*.yaml")):
-        values = parse_flat_yaml(path)
-        name = values.get("name", path.stem)
-        rules_dir = Path(values["rules_dir"])
-        agent_dir = values.get("agent_dir") or rules_dir.parent.as_posix()
+    for contract in load_profile_contracts(PROFILE_ROOT).values():
+        name = contract.name
+        rules_dir = Path(contract.rules_dir)
+        agent_dir = contract.agent_dir or rules_dir.parent.as_posix()
         profiles[name] = EnvProfile(
             name=name,
             agent_dir=agent_dir,
-            skills_dir=values.get("skills_dir") or f"{agent_dir}/skills",
+            skills_dir=contract.skills_dir or f"{agent_dir}/skills",
             rules_dir=rules_dir.as_posix(),
-            scripts_dir=values.get("scripts_dir") or f"{agent_dir}/scripts",
-            entry_file=values["entry_file"],
-            template_profile=values.get("env_template", name),
+            scripts_dir=contract.scripts_dir or f"{agent_dir}/scripts",
+            entry_file=contract.entry_file,
+            template_profile=contract.env_template or name,
         )
     if profiles:
         return profiles
@@ -75,7 +83,9 @@ BUILTIN_PROFILES = load_builtin_profiles()
 
 def load_profile_file(path: str | Path) -> EnvProfile:
     profile_path = Path(path).resolve()
-    values = parse_flat_yaml(profile_path)
+    values, findings = parse_flat_yaml(profile_path)
+    if findings:
+        raise argparse.ArgumentTypeError("; ".join(findings))
     name = values.get("name", profile_path.stem)
     if "rules_dir" not in values:
         raise argparse.ArgumentTypeError(f"profile is missing rules_dir: {profile_path}")

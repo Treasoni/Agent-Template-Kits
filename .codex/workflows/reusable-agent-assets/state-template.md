@@ -12,6 +12,9 @@ current_phase: P0
 current_status: not_started
 mode: standard
 blocked_reason: ""
+quality_gate: pending
+quality_gate_owner: ""
+quality_gate_due: ""
 ---
 
 # Reusable Agent Assets - Workflow Run
@@ -32,7 +35,7 @@ blocked_reason: ""
 - [ ] 已识别候选类型：skill、rule、workflow、template、hook、script、doc 或混合包
 - [ ] 已确认没有需要阻塞处理的密钥、凭证或安全问题
 
-> [P0] ⬜ 未开始
+> [P0] ⬜ 未开始 {not_started}
 
 ---
 
@@ -43,7 +46,7 @@ blocked_reason: ""
 - [ ] 已决定新建、更新或跳过的文件清单
 - [ ] 已记录计划执行的验证命令
 
-> [P1] ⬜ 未开始
+> [P1] ⬜ 未开始 {not_started}
 
 ---
 
@@ -54,7 +57,7 @@ blocked_reason: ""
 - [ ] 已保留用户意图并补足必要结构
 - [ ] 已让稳定说明位于动态示例和运行时数据之前
 
-> [P2] ⬜ 未开始
+> [P2] ⬜ 未开始 {not_started}
 
 ---
 
@@ -65,7 +68,7 @@ blocked_reason: ""
 - [ ] 如涉及 hook，已检查 `.codex/hooks.json`
 - [ ] 如涉及早期加载规则，已最小化更新 `AGENTS.md`
 
-> [P3] ⬜ 未开始
+> [P3] ⬜ 未开始 {not_started}
 
 ---
 
@@ -76,7 +79,7 @@ blocked_reason: ""
 - [ ] 已确认未回退无关用户变更
 - [ ] 已记录任何未运行验证及原因
 
-> [P4] ⬜ 未开始
+> [P4] ⬜ 未开始 {not_started}
 
 ---
 
@@ -87,7 +90,7 @@ blocked_reason: ""
 - [ ] 已列出触发该 workflow 的未来表达
 - [ ] 已完成或说明所有跳过、阻塞项
 
-> [P5] ⬜ 未开始
+> [P5] ⬜ 未开始 {not_started}
 
 ---
 

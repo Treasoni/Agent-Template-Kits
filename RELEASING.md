@@ -11,10 +11,14 @@
 
    ```bash
    bash scripts/validate.sh
-   bash skills/security-secret-audit/scripts/audit-secrets.sh
+   python3 scripts/sync-runtime-skills.py --validate --with-external --offline
+   python3 scripts/render-user-guide.py --check
+   bash skills/security-secret-audit/scripts/audit-secrets.sh --project --strict
+   git diff --check
    ```
 
-3. 确认两个命令均以状态码 `0` 结束，并检查 `git diff --check` 没有空白错误。
+3. 确认所有命令均以状态码 `0` 结束。外部 skill 必须已缓存；若本地尚无缓存，先移除 `--offline` 获取并验证固定版本，再以 `--offline` 复验。
+4. 确认 CI 的 Ubuntu、macOS、Windows × Python 3.10/当前稳定版矩阵全绿，且没有仍处于 active 状态的发布工作流 run。
 
 ## 发布
 
@@ -22,7 +26,7 @@
 2. 创建带说明的标签，例如：
 
    ```bash
-   git tag -a vX.Y.Z -m "Release vX.Y.Z"
+   git tag -a v0.1.0 -m "Release v0.1.0"
    ```
 
 3. 推送提交和标签：

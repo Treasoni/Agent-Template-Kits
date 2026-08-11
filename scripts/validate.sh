@@ -18,7 +18,7 @@ require_command() {
 require_command bash
 
 is_python3() {
-  "$1" -c 'import sys; raise SystemExit(0 if sys.version_info[0] == 3 else 1)' >/dev/null 2>&1
+  "$1" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' >/dev/null 2>&1
 }
 
 find_python() {
@@ -38,17 +38,20 @@ find_python() {
 }
 
 PYTHON_BIN="$(find_python)" || {
-  printf '%s\n' 'validate: missing required command: Python 3 (python3 or python)' >&2
+  printf '%s\n' 'validate: missing required command: Python 3.10+ (python3 or python)' >&2
   exit 1
 }
 
 log "python syntax"
 "$PYTHON_BIN" -m py_compile \
   scripts/install.py \
+  scripts/profile_contract.py \
+  scripts/render-user-guide.py \
   templates/self-learning/install.py \
   templates/self-learning/hooks/read_learnings.py \
   templates/env/install.py \
   skills/sync-skill-registry/scripts/sync_skill_registry.py \
+  skills/maintain-learnings/scripts/audit_learnings.py \
   skills/manifest-platform/assets/platform/manifest-registry.py \
   scripts/check-docs.py \
   scripts/sync-runtime-skills.py \
@@ -59,9 +62,6 @@ log "python syntax"
   skills/multi-agent-sync/scripts/validate_portability.py \
   .codex/platform/manifest-registry.py
 
-log "multi-agent sync tests"
-"$PYTHON_BIN" -m unittest tests.test_multi_agent_sync
-
 log "shell syntax"
 bash -n \
   templates/cache/prompt-cache-bootstrap.sh \
@@ -71,7 +71,6 @@ bash -n \
   skills/workflow-todo-state/scripts/install.sh \
   skills/workflow-todo-state/scripts/todo-state.sh \
   skills/workflow-todo-state/scripts/sync-workflow-routing.sh \
-  .agents/skills/manifest-platform/scripts/install.sh \
   templates/self-learning/hooks/read-learnings.sh \
   templates/env/codex/scripts/check-env-template.sh \
   templates/env/claude/scripts/check-env-template.sh
@@ -135,8 +134,8 @@ test -f "$TMP_DIR/.agent/skills/sync-skill-registry/SKILL.md"
 log "learning hook"
 "$PYTHON_BIN" "$TMP_DIR/.agent/hooks/read_learnings.py" --project-root "$TMP_DIR" >/dev/null
 
-log "runtime skill mirrors"
-"$PYTHON_BIN" scripts/sync-runtime-skills.py --check >/dev/null
+log "runtime skill sources"
+"$PYTHON_BIN" scripts/sync-runtime-skills.py --validate >/dev/null
 
 log "public documentation"
 "$PYTHON_BIN" scripts/check-docs.py >/dev/null
@@ -146,6 +145,9 @@ log "profile contracts"
 
 log "strict environment template"
 bash .codex/scripts/check-env-template.sh --strict >/dev/null
+
+log "strict project security audit"
+bash skills/security-secret-audit/scripts/audit-secrets.sh --project --strict >/dev/null
 
 log "regression tests"
 "$PYTHON_BIN" -m unittest discover -s tests -p 'test_*.py'

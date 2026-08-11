@@ -1,6 +1,6 @@
 # Agent Template Kits — 功能与使用文档
 
-> 版本：对应仓库 `Unreleased` 发行线  
+> 版本：`v0.1.0` 发布候选基线
 > 适用对象：需要在 AI 编程助手中引入工程化能力的开发团队  
 > 文档定位：面向客户的产品功能说明 + 快速上手指南
 
@@ -47,7 +47,7 @@ Agent Template Kits 是一组**可移植、可安装**的 AI Agent 工程模板�
 - **模板源而非应用**：克隆后安装到目标项目，不改动目标项目已有结构
 - **安全优先**：所有操作默认 dry-run 预览，确认后才执行
 - **幂等可重复**：安装器可安全重复执行，不会覆盖已有定制内容
-- **跨平台跨 Agent**：一套模板，适配 12 种主流 AI 编程助手，支持 Linux、macOS、Windows
+- **分级支持**：Codex、Claude Code、CodeBuddy 为 Tier 1；其余 profile 为 contract-tested Tier 2
 - **可追溯更新**：通过 `install-state.json` 记录已安装的 profile、组件和文件指纹，安全更新时能区分模板变更与项目定制内容
 
 ---
@@ -92,6 +92,7 @@ Agent Template Kits 是一组**可移植、可安装**的 AI Agent 工程模板�
 - 通过 `todo-state.sh` 脚本确定性更新阶段状态
 - 支持阶段流转：`未开始 → 进行中 → 已完成 / 跳过 / 阻塞`
 - 中断后可检查 YAML 前置元数据和当前阶段，安全恢复
+- 最终阶段只有在 `quality_gate: passed` 后才能完成；临时豁免必须记录 owner 和 due date
 
 ### 2.5 技能注册表同步（Skill Registry）
 
@@ -135,7 +136,7 @@ Agent Template Kits 是一组**可移植、可安装**的 AI Agent 工程模板�
 
 ## 3. 支持的 AI 编程助手
 
-本产品内置 **12 种** Agent Profile，覆盖主流 AI 编程助手：
+本产品内置 **12 种** Agent Profile。Tier 1（Codex、Claude Code、CodeBuddy）执行跨系统安装与升级验证；其余 profile 属于 Tier 2，执行布局合同与 smoke test：
 
 | Profile | Skills 目录 | Rules 目录 | Hooks | 入口文件 |
 |---------|------------|-----------|-------|---------|
@@ -163,7 +164,7 @@ Agent Template Kits 是一组**可移植、可安装**的 AI Agent 工程模板�
 | 工具 | 用途 | 要求 |
 |------|------|------|
 | **Git** | 克隆模板、密钥审计 | 建议安装 |
-| **Python 3** | 安装器、hooks、注册表 | 必需 |
+| **Python 3.10+** | 安装器、hooks、注册表 | 必需 |
 | **Bash** | Shell 安装器和检查脚本 | Linux、macOS、WSL 或 Git Bash |
 | **ripgrep (`rg`)** | 严格 env 检查 | 使用 env 检查时必需 |
 | **Perl** | workflow 状态和密钥检测 | 使用对应组件时必需 |
@@ -179,6 +180,12 @@ Agent Template Kits 是一组**可移植、可安装**的 AI Agent 工程模板�
 ```bash
 git clone https://github.com/Treasoni/Agent-Template-Kits.git
 cd Agent-Template-Kits
+
+# 生成本机 Codex / Claude runtime；公共 canonical core 不依赖网络
+python3 scripts/sync-runtime-skills.py --apply
+
+# 可选：按 commit + 内容哈希安装 skills-lock.json 中的第三方开发 skills
+python3 scripts/sync-runtime-skills.py --apply --with-external
 ```
 
 ### 第二步：指定目标项目
@@ -411,7 +418,7 @@ AUDITOR="$PWD/skills/security-secret-audit/scripts/audit-secrets.sh"
 # 项目安全审查：凭证泄漏 + 高置信度源码、配置和敏感文件风险
 (cd "$TARGET" && "$AUDITOR" --project)
 
-# CI 阻断模式；默认不扫描 Git 历史
+# CI 阻断模式；--strict 与 --fix 必须搭配 --project
 (cd "$TARGET" && "$AUDITOR" --project --strict)
 
 # 先预览，再仅补充受管的本地凭证忽略规则
@@ -665,8 +672,8 @@ scripts/validate.sh
 # Workflow 路由注册表检查
 .codex/scripts/sync-workflow-routing.sh --check
 
-# 密钥安全审计
-skills/security-secret-audit/scripts/audit-secrets.sh
+# 项目风险与凭证严格审计
+skills/security-secret-audit/scripts/audit-secrets.sh --project --strict
 
 # 空白错误检查
 git diff --check
@@ -683,10 +690,11 @@ python3 scripts/validate-profiles.py
 # 验证文档覆盖所有组件
 python3 scripts/check-docs.py
 
-# 将 skills/ 中规范源同步到 .agents/skills/（自身使用）
-python3 scripts/sync-runtime-skills.py
+# 验证 canonical packages、外部来源 commit/license/hash 与 profile 合同
+python3 scripts/sync-runtime-skills.py --validate
 
-# 检查 skills/ 与 .agents/skills/ 是否同步
+# 生成或检查本机 runtime adapters（不提交到 Git）
+python3 scripts/sync-runtime-skills.py --apply
 python3 scripts/sync-runtime-skills.py --check
 ```
 
@@ -738,7 +746,7 @@ cd "$TARGET"
 
 ### Q: 多 Agent 同步的 bootstrap.py 生成的文件需要提交吗？
 
-不需要。`hooks.json`、`settings.json` 等本机配置文件已在 `.gitignore` 中。它们包含当前主机的 Python 解释器路径，每台机器不同。在新机器克隆后需重新执行 `bootstrap.py --apply`。
+不需要。runtime skills、`hooks.json`、`settings.json` 和 `.agent-sync/` 都是本机生成内容，已在 `.gitignore` 中。在新机器克隆后先执行 `scripts/sync-runtime-skills.py --apply`，需要跨 Agent hooks 时再安装并运行 `.agent-sync/bootstrap.py --apply`。
 
 ---
 
@@ -776,10 +784,12 @@ target-project/
 ```text
 profiles/       内置 Agent 布局合同（12 种内置 Profile）
 templates/      可安装的规则、hook 和初始文件
-skills/         可独立分发的 skill 包和工具（8 个功能模块）
-.agents/        本仓库自身使用的 Codex skills（由 sync-runtime-skills.py 同步 skills/ 镜像）
+skills/         公共 canonical skill packages；必须是可复制的真实目录
+.agents/        本机 Codex runtime adapter（gitignored，由 bootstrap 生成）
+.claude/        Claude Code 配置；skills runtime adapter 由 bootstrap 生成
 .codex/         本仓库自身使用的 rules、hooks 和 workflows
-.agent-sync/    多 Agent 同步 runtime
+.agent-sync/    可选多 Agent 同步 runtime（gitignored）
+.agent-runtime/ runtime skill 状态与外部 source cache（gitignored）
 scripts/        仓库级验证命令（validate.sh、install.py、sync-runtime-skills.py 等）
 tests/          安装、升级和状态转移回归测试
 docs/           便携性说明 + 设计方案（superpowers/）+ 完整功能文档
@@ -801,8 +811,8 @@ docs/           便携性说明 + 设计方案（superpowers/）+ 完整功能�
 2. 在干净工作树中运行验证：
 
 ```bash
-bash scripts/validate.sh
-bash skills/security-secret-audit/scripts/audit-secrets.sh
+scripts/validate.sh
+skills/security-secret-audit/scripts/audit-secrets.sh --project --strict
 ```
 
 3. 确认两个命令均以状态码 `0` 结束，并检查 `git diff --check` 没有空白错误
@@ -813,7 +823,7 @@ bash skills/security-secret-audit/scripts/audit-secrets.sh
 2. 创建带说明的标签：
 
 ```bash
-git tag -a vX.Y.Z -m "Release vX.Y.Z"
+git tag -a v0.1.0 -m "Release v0.1.0"
 ```
 
 3. 推送提交和标签：

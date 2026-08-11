@@ -37,8 +37,9 @@ Run the bundled scanner before a commit, whenever a credential leak is suspected
 4. Report findings by file, line, rule name, and scope only. Never reveal credential values.
 5. For a current-file finding, remove the secret from tracked content, move it to an ignored local configuration file, and add a sanitized example when configuration documentation is needed.
 6. For a history finding, revoke or rotate the credential first. Then explain that deleting the current file is insufficient and rewrite history only with explicit user authorization.
-7. `--fix` may only add the marked, idempotent local-credential ignore block to `.gitignore`. It never deletes secrets, rotates or revokes credentials, rewrites Git history, stages files, commits, or pushes. If a credential finding exists, it skips the fix because ignoring the file is insufficient.
-8. Re-run the same scan after remediation. A clean credential scan is required before staging or committing.
+7. `--strict` and `--fix` require `--project`. CI uses `--project --strict` and never uses `--fix`.
+8. `--fix` may only add or replace the marked, idempotent local-credential ignore block in `.gitignore`. It keeps `.env.example`, `.env.sample`, `.env.template`, and their named variants trackable. It never deletes secrets, rotates or revokes credentials, rewrites Git history, stages files, commits, or pushes. If a credential finding exists, it skips the fix because ignoring the file is insufficient.
+9. Re-run the same scan after remediation. A clean credential scan is required before staging or committing.
 
 ## Scanner Contract
 

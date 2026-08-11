@@ -16,6 +16,8 @@ SECRET_FINDINGS=0
 RISK_FINDINGS=0
 POLICY_FINDINGS=0
 FAILURES=0
+IGNORE_BEGIN='# security-secret-audit: local credentials'
+IGNORE_END='# security-secret-audit: end local credentials'
 
 usage() {
   cat <<'USAGE'
@@ -59,6 +61,15 @@ while [ "$#" -gt 0 ]; do
   esac
   shift
 done
+
+if [ "$STRICT" -eq 1 ] && [ "$PROJECT_AUDIT" -ne 1 ]; then
+  printf '%s\n' 'error: --strict requires --project' >&2
+  exit 2
+fi
+if [ "$FIX" -eq 1 ] && [ "$PROJECT_AUDIT" -ne 1 ]; then
+  printf '%s\n' 'error: --fix requires --project' >&2
+  exit 2
+fi
 
 if ! command -v perl >/dev/null 2>&1; then
   printf '%s\n' 'error: perl is required for the bundled detectors' >&2
@@ -215,24 +226,92 @@ audit_sensitive_file_policy() {
 }
 
 audit_ignore_policy() {
-  local marker='# security-secret-audit: local credentials'
+  local pattern
 
-  if [ ! -f .gitignore ] || ! grep -Fqx "$marker" .gitignore; then
+  if [ ! -f .gitignore ] || ! grep -Fqx "$IGNORE_BEGIN" .gitignore || ! grep -Fqx "$IGNORE_END" .gitignore; then
     record_policy_finding '.gitignore' 'missing-local-credential-ignore-block'
+    return
   fi
+  while IFS= read -r pattern; do
+    if ! grep -Fqx "$pattern" .gitignore; then
+      record_policy_finding '.gitignore' 'incomplete-local-credential-ignore-block'
+      return
+    fi
+  done <<'EOF'
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+!.env.*.example
+!.env.*.sample
+!.env.*.template
+*.key
+*.p12
+*.pfx
+EOF
+}
+
+print_safe_ignore_block() {
+  cat <<EOF
+$IGNORE_BEGIN
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+!.env.*.example
+!.env.*.sample
+!.env.*.template
+*.key
+*.p12
+*.pfx
+$IGNORE_END
+EOF
 }
 
 apply_safe_ignore_fix() {
-  local marker='# security-secret-audit: local credentials'
+  local action='append-local-credential-ignore-block'
+  local temporary
 
-  if grep -Fqx "$marker" .gitignore 2>/dev/null; then
-    printf '%s\n' 'remediation-preview:.gitignore:0:local-credential-ignore-block-already-present'
-    return 0
+  if [ -f .gitignore ] && grep -Fqx "$IGNORE_BEGIN" .gitignore && grep -Fqx "$IGNORE_END" .gitignore; then
+    if ignore_policy_is_current; then
+      printf '%s\n' 'remediation-preview:.gitignore:0:local-credential-ignore-block-already-present'
+      return 0
+    fi
+    action='replace-local-credential-ignore-block'
+    temporary="$(mktemp "${TMPDIR:-/tmp}/security-secret-audit-gitignore.XXXXXX")"
+    awk -v begin="$IGNORE_BEGIN" -v end="$IGNORE_END" '
+      $0 == begin { managed = 1; next }
+      managed && $0 == end { managed = 0; next }
+      !managed { print }
+    ' .gitignore > "$temporary"
+    mv "$temporary" .gitignore
+  elif [ -f .gitignore ] && grep -Fqx "$IGNORE_BEGIN" .gitignore; then
+    printf '%s\n' 'error: managed .gitignore block has no end marker' >&2
+    FAILURES=1
+    return 1
   fi
 
-  printf '%s\n' 'remediation-preview:.gitignore:0:append-local-credential-ignore-block'
-  printf '\n%s\n.env\n.env.*\n!.env.example\n!.env.sample\n*.key\n*.p12\n*.pfx\n' "$marker" >> .gitignore
-  printf '%s\n' 'remediation-applied:.gitignore:0:append-local-credential-ignore-block'
+  printf 'remediation-preview:.gitignore:0:%s\n' "$action"
+  if [ -s .gitignore ]; then
+    printf '\n' >> .gitignore
+  fi
+  print_safe_ignore_block >> .gitignore
+  printf 'remediation-applied:.gitignore:0:%s\n' "$action"
+}
+
+ignore_policy_is_current() {
+  local previous_policy="$POLICY_FINDINGS"
+
+  POLICY_FINDINGS=0
+  audit_ignore_policy >/dev/null
+  if [ "$POLICY_FINDINGS" -eq 0 ]; then
+    POLICY_FINDINGS="$previous_policy"
+    return 0
+  fi
+  POLICY_FINDINGS="$previous_policy"
+  return 1
 }
 
 case "$MODE" in

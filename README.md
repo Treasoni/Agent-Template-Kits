@@ -1,89 +1,49 @@
 # Agent Template Kits
 
-<p align="left">
-  <img src="https://img.shields.io/badge/agents-portable-blue" alt="Agent portable">
-  <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
-  <img src="https://img.shields.io/badge/status-maintained-brightgreen" alt="Status">
-</p>
+可安装到其他项目的 Agent 工程模板源。它提供自学习、环境变量规范、提示缓存、可恢复 workflow、技能注册表、多 Agent 同步、manifest registry 和安全审计，不是需要部署的应用。
 
-一组可安装到其他项目的 Agent 工程模板，包含自学习、提示缓存、环境变量规范、可恢复 workflow、技能注册表和密钥审计。
+当前目标版本：`v0.1.0` 发布候选。
 
-这个仓库是“模板源”，不是需要部署的应用。通常做法是克隆本仓库，然后运行安装器，把所需能力写入另一个目标项目。
+## Source Of Truth
 
-## 适用场景
+```text
+skills/ + templates/ + profiles/ + docs source
+                    │
+                    ├── scripts/install.py ──> 目标项目
+                    └── scripts/sync-runtime-skills.py ──> 本机 Agent runtime
+```
 
-- 为 Codex、Claude Code 或其他 Agent 项目初始化可复用规则和 skills。
-- 在会话开始时自动读取经验库，并维护 `.learnings/`。
-- 为长任务加入可恢复的 phase 状态和 workflow routing。
-- 统一 `.env.example` 维护方式，检查缺失、未使用变量和可疑凭证。
-- 优化 LLM 提示缓存布局，安装观测 schema 和回归样本。
-- 将共享 Agent 配置同步到 Codex、Claude Code、CodeBuddy 等 profile，并检测漂移。
-- 安装 manifest registry，声明 workflow、skill、hook 等 Agent 资产的版本、能力与权限。
-- 在提交前扫描 API Key、Token、密码和私钥，并审查高置信度项目安全风险。
+- `skills/`、`templates/` 和 `profiles/` 是公共 canonical source。
+- `.agents/skills/`、`.claude/skills/`、`.codebuddy/skills/` 是 gitignored runtime adapters，克隆后生成。
+- `skills-lock.json` 中的第三方开发 skills 固定 upstream commit、许可证和内容哈希；它们不是公共 canonical packages。
+- runtime 不得反向成为 canonical source，也不得通过 tracked symlink 暴露为 `skills/*`。
 
-## 运行要求
+## 要求
 
-| 工具 | 用途 | 要求 |
-| --- | --- | --- |
-| Git | 克隆模板、密钥审计 | 建议安装 |
-| Python 3 | Python 安装器、hooks、注册表 | 必需 |
-| Bash | Shell 安装器和检查脚本 | Linux、macOS、WSL 或 Git Bash |
-| ripgrep (`rg`) | 严格 env 检查 | 使用 env 检查时必需 |
-| Perl | workflow 状态和密钥检测 | 使用对应组件时必需 |
+| 工具 | 要求 |
+| --- | --- |
+| Python | 3.10+ |
+| Git | 建议安装；安全审计需要 |
+| Bash | Linux、macOS、WSL 或 Git Bash |
+| ripgrep (`rg`) | strict env 检查需要 |
+| Perl | workflow 状态与安全检测需要 |
 
-Python 脚本可直接在原生 Windows 运行。Bash 脚本可在 Linux、macOS、WSL 或 Git Bash 中使用；统一安装器会自动查找系统 Bash 和常见 Git Bash 安装位置。
-
-## 1. 获取模板并指定目标项目
+## 快速开始
 
 ```bash
 git clone https://github.com/Treasoni/Agent-Template-Kits.git
 cd Agent-Template-Kits
 
-# 要接入这些模板的项目；目录必须已存在
 export TARGET=/absolute/path/to/your-project
 test -d "$TARGET"
-```
 
-On Windows, use `python` in the commands below; the scripts accept `python3` or `python`, and generated hooks use `python.exe` on Windows.
-
-后续示例都在本仓库根目录执行，`$TARGET` 始终指向目标项目。
-
-## 2. 选择 Agent Profile
-
-Profile 决定把 skills、rules、hooks 和入口说明写到哪里。
-
-| Profile | Skills | Rules / Config | Hooks | 入口文件 |
-| --- | --- | --- | --- | --- |
-| `codex` | `.agents/skills` | `.codex/rules` | `.codex/hooks` | `AGENTS.md` |
-| `claude` | `.claude/skills` | `.claude/rules` | `.claude/hooks` | `CLAUDE.md` |
-| `codebuddy` | `.codebuddy/skills` | `.codebuddy/rules` | `.codebuddy/hooks` | `CODEBUDDY.md` |
-| `cursor` | `.cursor/skills` | `.cursor/rules` | — | `AGENTS.md` |
-| `gemini` | `.gemini/skills` | `.gemini/rules` | — | `GEMINI.md` |
-| `github-copilot` | `.github/skills` | `.github/instructions` | — | `.github/copilot-instructions.md` |
-| `cline` | `.cline/skills` | `.clinerules` | — | `AGENTS.md` |
-| `roo-code` | `.roo/skills` | `.roo/rules` | — | `AGENTS.md` |
-| `windsurf` | `.windsurf/skills` | `.windsurf/rules` | — | `AGENTS.md` |
-| `opencode` | `.opencode/skills` | `.opencode/rules` | — | `AGENTS.md` |
-| `qwen-code` | `.qwen/skills` | `.qwen/rules` | — | `QWEN.md` |
-| `generic` | `.agent/skills` | `.agent/rules` | `.agent/hooks` | `AGENTS.md` |
-
-使用对应的 profile 名称即可，例如 CodeBuddy Code 用 `codebuddy`、Gemini CLI 用 `gemini`、GitHub Copilot 用 `github-copilot`、Qwen Code 用 `qwen-code`。未在表中的 Agent 优先选 `generic`，或在后文使用自定义 profile。
-
-## 2.1 自动检测与统一安装（推荐）
-
-统一安装器默认只预览，先根据目标项目已有的 agent 目录、配置和入口文件显示候选项及证据，不会猜测只含 `AGENTS.md` 的项目。
-
-```bash
-# 只检测，不修改目标项目
+# 自动检测，只读
 python3 scripts/install.py --target "$TARGET" --detect
 
-# 采用所有检测到的 profile，仍然只预览将执行的命令
+# 预览安装计划
 python3 scripts/install.py --target "$TARGET" --use-detected
 
-# 手动选择 CodeBuddy；--apply 时会要求确认
-python3 scripts/install.py --target "$TARGET" --profile codebuddy --apply
-
-# 自动选择并在非交互环境执行；仅安装需要的能力
+# 明确确认后安装选中的能力
 python3 scripts/install.py \
   --target "$TARGET" \
   --use-detected \
@@ -91,457 +51,95 @@ python3 scripts/install.py \
   --apply --yes
 ```
 
-可选组件是 `self-learning`、`env`、`prompt-cache`、`workflow`、`registry`、`manifest-platform` 和 `multi-agent-sync`。默认安装前五项核心组件；后两项会引入额外的 registry 或 `.agent-sync/` runtime，必须显式写入 `--components`。统一安装器会把 `prompt-cache-optimizer`、`workflow-todo-state`、`sync-skill-registry` 和按需选择的 `manifest-platform` 复制到所选 profile 的 skills 目录。`prompt-cache`、`workflow` 与 `manifest-platform` 使用 Bash：Linux/macOS 可直接运行；Windows 下安装器会寻找 Git Bash，找不到时会明确提示安装 Git for Windows 或使用 WSL。`--overwrite`、`--force-workflow` 和 `--force-manifest-platform` 都需要显式给出，避免覆盖已有定制内容。
+安装器默认 dry-run；`--overwrite`、`--force-workflow` 和 `--force-manifest-platform` 必须显式给出。应用后先检查目标项目的 `git diff`。
 
-## 3. Codex 项目的推荐安装
+## 本仓库 Runtime Bootstrap
 
-下面的组合会安装自学习、env 规则、提示缓存和 workflow，最后生成技能注册表。
-
-```bash
-# 1. digest + maintain-learnings + 学习记录 + SessionStart hook
-python3 templates/self-learning/install.py \
-  --target "$TARGET" \
-  --profile codex
-
-# 2. 环境变量规则和检查脚本
-python3 templates/env/install.py \
-  --target "$TARGET" \
-  --profile codex
-
-# 3. 提示缓存 skill 和规则
-bash skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh \
-  --apply \
-  --platform codex \
-  --with-skill \
-  --target "$TARGET"
-
-# 4. 可恢复 workflow、routing 规则和状态脚本
-bash skills/workflow-todo-state/scripts/install.sh \
-  "$TARGET" \
-  --profile codex \
-  --with-skill \
-  --init-layout \
-  --update-agents
-
-# 5. 先预览注册表，再写入
-python3 skills/sync-skill-registry/scripts/sync_skill_registry.py \
-  --profile codex \
-  --root "$TARGET" \
-  --create --with-skill \
-  --dry-run
-
-python3 skills/sync-skill-registry/scripts/sync_skill_registry.py \
-  --profile codex \
-  --root "$TARGET" \
-  --create --with-skill
-```
-
-安装器会创建缺失目录，但 `$TARGET` 本身必须已存在。安装完成后，建议先检查目标项目的 `git diff`，再提交。
-
-## 4. 其他内置 Profile 与 Generic 安装
-
-Claude Code 使用同样的组合，把 profile 替换为 `claude`：
+公共 canonical core 的生成不依赖网络：
 
 ```bash
-python3 templates/self-learning/install.py --target "$TARGET" --profile claude
-python3 templates/env/install.py --target "$TARGET" --profile claude
-bash skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh --apply --platform claude --with-skill --target "$TARGET"
-bash skills/workflow-todo-state/scripts/install.sh "$TARGET" --profile claude --with-skill --init-layout --update-agents
-python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --profile claude --root "$TARGET" --create --with-skill --dry-run
+# 生成 Codex 与 Claude Code runtime adapters
+python3 scripts/sync-runtime-skills.py --apply
+
+# 检查本机 adapters
+python3 scripts/sync-runtime-skills.py --check
+
+# 可选：下载并校验锁定的第三方开发 skills
+python3 scripts/sync-runtime-skills.py --apply --with-external
 ```
 
-其他内置 profile 也使用相同命令。例如安装到 Gemini CLI 项目：
+外部 source 缓存在 `.agent-runtime/cache/`。离线重建可使用 `--with-external --offline`；缓存缺失时会明确失败。
+
+## 功能组件
+
+| 组件 | 用途 |
+| --- | --- |
+| `self-learning` | 安装经验库、digest、maintain-learnings 和会话 hook |
+| `env` | 安装 `.env.example` 维护规则与 strict 检查器 |
+| `prompt-cache` | 安装 prompt-cache skill、规则和可选观测合同 |
+| `workflow` | 安装 recoverable workflow、routing 和 quality-gated 状态脚本 |
+| `registry` | 生成并维护 skill invocation registry |
+| `manifest-platform` | 安装 Agent 资产 manifest registry |
+| `multi-agent-sync` | 安装跨 profile 的共享配置 runtime |
+
+安全审计是独立的 canonical skill：
 
 ```bash
-python3 templates/self-learning/install.py --target "$TARGET" --profile gemini
-python3 templates/env/install.py --target "$TARGET" --profile gemini
-bash skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh --apply --platform gemini --with-skill --target "$TARGET"
-bash skills/workflow-todo-state/scripts/install.sh "$TARGET" --profile gemini --with-skill --init-layout --update-agents
-python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --profile gemini --root "$TARGET" --create --with-skill --dry-run
+# 默认凭证扫描
+skills/security-secret-audit/scripts/audit-secrets.sh
+
+# PR/CI 项目风险门禁；不扫描 Git 历史
+skills/security-secret-audit/scripts/audit-secrets.sh --project --strict
+
+# 仅在泄漏调查时扫描历史
+skills/security-secret-audit/scripts/audit-secrets.sh --history
 ```
 
-Generic profile 也可直接使用内置名称：
+审计输出只包含 scope、路径、行号和规则名，不输出匹配内容。`--fix` 只维护标记的本地凭证 ignore block，且必须与 `--project` 一起使用；CI 不应运行 `--fix`。
+
+## Profile 支持级别
+
+- Tier 1：Codex、Claude Code、CodeBuddy。执行 Ubuntu、macOS、Windows 安装与更新验证。
+- Tier 2：Cursor、Gemini、GitHub Copilot、Cline、Roo Code、Windsurf、OpenCode、Qwen Code、generic。执行 profile contract 与 Linux smoke test。
+
+所有内置布局见 [profiles/README.md](profiles/README.md)。
+
+## 更新已有安装
+
+统一安装器会把受管文件指纹写入目标项目的 `.agent-template-kits/install-state.json`：
 
 ```bash
-python3 templates/self-learning/install.py --target "$TARGET" --profile generic
-python3 templates/env/install.py --target "$TARGET" --profile generic
-bash skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh \
-  --apply \
-  --platform generic \
-  --with-skill \
-  --target "$TARGET"
-bash skills/workflow-todo-state/scripts/install.sh "$TARGET" --profile generic --with-skill --init-layout --update-agents
-python3 skills/sync-skill-registry/scripts/sync_skill_registry.py --profile generic --root "$TARGET" --create --with-skill --dry-run
+python3 scripts/install.py --target "$TARGET" --update
+python3 scripts/install.py --target "$TARGET" --update --apply --yes
 ```
 
-dry-run 确认无误后，去掉 `--dry-run` 再运行一次注册表命令。
+检测到用户修改的受管文件时，更新器停止并要求逐项 `--accept <path>`；应用前会写入备份目录。
 
-## 5. 按需安装单个能力
-
-### 自学习
-
-```bash
-python3 templates/self-learning/install.py --target "$TARGET" --profile codex
-```
-
-会安装：
-
-- `digest` 和 `maintain-learnings` skills。
-- `.learnings/RULES.md`、`ERRORS.md`、`LEARNINGS.md`。
-- 会话开始读取经验库的 hook 脚本。
-- 对应 Agent 的 hook 配置；既有无关 hooks 会保留。
-
-如果只需要 skills 和学习文件，不安装 hooks：
-
-```bash
-python3 templates/self-learning/install.py --target "$TARGET" --profile codex --no-hooks
-```
-
-更多说明见 [templates/self-learning/README.md](templates/self-learning/README.md)。
-
-### 提示缓存
-
-推荐使用完整版，它会安装 skill 和规则：
-
-```bash
-bash skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh \
-  --apply \
-  --platform codex \
-  --with-skill \
-  --target "$TARGET"
-```
-
-只需要规则和入口文件引用时，使用精简版：
-
-```bash
-bash templates/cache/prompt-cache-bootstrap.sh \
-  --apply \
-  --platform codex \
-  --target "$TARGET"
-```
-
-审计现有配置时把 `--apply` 换成 `--check`。详见 [templates/cache/README.md](templates/cache/README.md) 和 [skills/prompt-cache-optimizer/SKILL.md](skills/prompt-cache-optimizer/SKILL.md)。
-
-只有 agent 已连接能够自动记录 provider usage 的 API 调用后，才额外加 `--with-observability`；它会安装 `/.llm/prompt-cache/` 的 schema 和回归样本合同。直接使用 Codex 时不要加此选项，也无需手填 token 或费用。
-
-### 环境变量规范
-
-```bash
-python3 templates/env/install.py --target "$TARGET" --profile codex
-```
-
-安装后在目标项目执行：
-
-```bash
-cd "$TARGET"
-.codex/scripts/check-env-template.sh
-.codex/scripts/check-env-template.sh --strict
-```
-
-检查脚本不会自动创建 `.env.example`；目标项目需要先准备自己的最小环境变量模板。默认模式会阻止缺失变量和可疑凭证；`--strict` 还会把未被代码引用的模板变量视为失败。详见 [templates/env/README.md](templates/env/README.md)。
-
-本仓库自身的 `.env.example` 包含以下变量：
-
-| 变量 | 默认值 | 用途 |
-| --- | --- | --- |
-| `PYTHON` | `python3` | Python 解释器路径，Windows 下自动检测 `py -3` 或 `python.exe` |
-| `PROMPT_CACHE_ASSET_DIR` | 空（使用内置资源） | 提示缓存观测 schema 与回归样本的自定义路径 |
-| `PROMPT_CACHE_PROFILE_ROOT` | 空 | 独立安装器副本使用的 profile-contract 位置 |
-| `WORKFLOW_PROFILE_ROOT` | 空 | 独立安装器副本使用的 workflow profile-contract 位置 |
-
-### 可恢复 Workflow
-
-```bash
-bash skills/workflow-todo-state/scripts/install.sh \
-  "$TARGET" \
-  --profile codex \
-  --with-skill \
-  --init-layout \
-  --update-agents
-```
-
-安装后：
-
-1. 在 `.codex/workflows/<workflow-id>/` 创建 `workflow.md`、`state-template.md` 和 `routing.yaml`。
-2. 运行 `.codex/scripts/sync-workflow-routing.sh`。
-3. 从 state template 创建 `workspace/workflow-runs/<task>.workflow.md`。
-4. 只通过 `.codex/scripts/todo-state.sh` 更新 phase 状态。
-
-详见 [skills/workflow-todo-state/SKILL.md](skills/workflow-todo-state/SKILL.md) 和 [integration guide](skills/workflow-todo-state/references/integration.md)。
-
-### 技能注册表
-
-```bash
-# 预览，不写文件
-python3 skills/sync-skill-registry/scripts/sync_skill_registry.py \
-  --profile codex \
-  --root "$TARGET" \
-  --create --with-skill \
-  --dry-run
-
-# 应用
-python3 skills/sync-skill-registry/scripts/sync_skill_registry.py \
-  --profile codex \
-  --root "$TARGET" \
-  --create --with-skill
-```
-
-脚本只管理生成区中标记为本地受管的 skills，会保留手工外部条目。详见 [skills/sync-skill-registry/SKILL.md](skills/sync-skill-registry/SKILL.md)。
-
-### 多 Agent 同步
-
-`multi-agent-sync` 是跨 profile 共享配置的唯一同步器；`maintain-learnings` 只维护 `.learnings/`。显式安装 runtime 后，先预览漂移，再只应用受影响 scope：
-
-```bash
-python3 scripts/install.py \
-  --target "$TARGET" \
-  --profile codex \
-  --components multi-agent-sync \
-  --apply --yes
-
-python3 "$TARGET/.agent-sync/sync_agents.py" --root "$TARGET" --check --scope skills
-python3 "$TARGET/.agent-sync/sync_agents.py" --root "$TARGET" --apply --scope skills
-```
-
-该 runtime 默认以 Codex 为 canonical profile，并包含 Codex、Claude Code 和 CodeBuddy 的路径合同。可在 `.agent-sync/agents/` 添加已受支持的 Agent profile。
-
-安装后，需为本机生成 hooks 配置文件：
-
-```bash
-cd "$TARGET"
-python3 .agent-sync/scripts/bootstrap.py --apply
-```
-
-这会根据 hook 模板创建各 Agent 的 `hooks.json` 或 `settings.json`（写入当前主机的 Python 解释器路径）。这些文件已在 `.gitignore` 中，不会提交到版本控制。后续在另一台机器克隆时需重新执行此步骤。
-
-详见 [skills/multi-agent-sync/SKILL.md](skills/multi-agent-sync/SKILL.md)。
-
-### Manifest Platform
-
-`manifest-platform` 为 workflow、skill、hook 和 subagent 建立可验证的注册表与权限合同：
-
-```bash
-python3 scripts/install.py \
-  --target "$TARGET" \
-  --profile codex \
-  --components manifest-platform \
-  --apply --yes
-
-python3 "$TARGET/.codex/platform/manifest-registry.py" --root "$TARGET" validate
-```
-
-如 registry 或 skill 已被项目定制，先检查差异；确认可替换后才补充 `--force-manifest-platform`。
-
-### 密钥审计
-
-密钥审计脚本扫描当前 Git 工作树。如果脚本位于本模板仓库，可以从目标项目调用它：
-
-```bash
-AUDITOR="$PWD/skills/security-secret-audit/scripts/audit-secrets.sh"
-
-# 扫描目标项目当前已跟踪和未忽略文件
-(cd "$TARGET" && "$AUDITOR")
-
-# 提交前只扫描 staged 内容
-(cd "$TARGET" && "$AUDITOR" --staged)
-
-# 泄露排查：包含 Git 历史
-(cd "$TARGET" && "$AUDITOR" --all)
-
-# 项目安全审查：凭证泄漏 + 高置信度源码、配置和敏感文件风险
-(cd "$TARGET" && "$AUDITOR" --project)
-
-# CI 中使项目风险阻断构建；默认不扫描 Git 历史
-(cd "$TARGET" && "$AUDITOR" --project --strict)
-
-# 仅低风险修复：先输出预览，再补充受管的本地凭证忽略规则
-(cd "$TARGET" && "$AUDITOR" --project --fix)
-```
-
-报告只包含文件、行号和规则名，不输出凭证原文。默认项目风险只告警，`--strict` 才以退出码 `2` 阻断；凭证泄漏始终以 `2` 阻断。`--fix` 只会向 `.gitignore` 写入幂等的本地凭证忽略块，绝不删除凭证、轮换或撤销密钥、改写 Git 历史、暂存、提交或推送。详见 [skills/security-secret-audit/SKILL.md](skills/security-secret-audit/SKILL.md)。
-
-## 6. 自定义 Agent
-
-需要在多个安装器中复用同一布局，或路径包含 Windows 盘符冒号时，建议创建 scalar YAML profile：
-
-```yaml
-name: myagent
-description: "Custom profile for MyAgent projects."
-agent_dir: .my-agent
-skills_dir: .my-agent/skills
-rules_dir: .my-agent/rules
-scripts_dir: .my-agent/scripts
-hooks_dir: .my-agent/hooks
-entry_file: INSTRUCTIONS.md
-hook_config: ""
-hook_template: ""
-include_openai_yaml: false
-env_template: codex
-skill_registry: .my-agent/rules/common/skill-invocation.md
-prompt_cache_rule: .my-agent/rules/common/prompt-cache.md
-```
-
-然后运行：
-
-```bash
-python3 templates/self-learning/install.py --target "$TARGET" --profile-file /path/to/myagent.yaml
-python3 templates/env/install.py --target "$TARGET" --profile-file /path/to/myagent.yaml
-```
-
-提示缓存与 workflow 使用显式自定义参数：
-
-```bash
-bash skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh \
-  --apply \
-  --platform none \
-  --agent myagent,.my-agent,INSTRUCTIONS.md \
-  --with-skill \
-  --target "$TARGET"
-
-bash skills/workflow-todo-state/scripts/install.sh \
-  "$TARGET" \
-  --agent-dir .my-agent \
-  --skills-dir .my-agent/skills \
-  --entry-file INSTRUCTIONS.md \
-  --with-skill \
-  --init-layout \
-  --update-agents
-```
-
-完整的第三方 Agent 接入见 [docs/PORTABILITY.md](docs/PORTABILITY.md)。
-
-## 7. 更新已安装的模板
-
-从本版本开始，使用统一安装器完成的安装会在目标项目保存
-`.agent-template-kits/install-state.json`。它记录已选 profile、组件和受管文件的
-指纹，让更新器能区分模板变更与项目自己的定制内容。
-
-先在**模板仓库**中选择要发布给用户的可信版本；这一步只更新模板源，不会修改目标项目的 Git：
-
-```bash
-git fetch --tags origin
-git switch --detach v1.2.3   # 替换为你准备发布的版本标签
-```
-
-然后先预览更新。更新器会把目标项目复制到临时目录，在副本上用原先的 profile 和组件生成候选结果；默认不会写入目标项目：
-
-```bash
-python3 scripts/install.py update --target "$TARGET"
-```
-
-如果输出了 `[CONFLICT] path`，表示该受管文件被项目修改、删除，或新模板将覆盖一个未受管的现有文件。更新会停止，直到你逐项确认；不要用通配符批量接受。确认无误后，将每个冲突路径显式写为一个 `--accept`：
-
-```bash
-python3 scripts/install.py update \
-  --target "$TARGET" \
-  --accept .agent/rules/common/env.md \
-  --accept .agent/skills/prompt-cache-optimizer/SKILL.md \
-  --apply --yes
-```
-
-应用前，更新器会把所有将改动的现有文件备份到
-`.agent-template-kits/backups/<UTC 时间戳>/`，再执行安装并核对结果是否与预览一致。它不会执行 `git pull`、`fetch`，也不会修改目标项目的 Git 元数据。首次使用过旧的单独安装命令的项目没有状态文件；请先使用一次 `scripts/install.py --apply` 重新安装所需组件，之后才能用安全更新命令。
-
-之后用统一安装器补装 profile 或组件时，更新器会继续维护已安装的全部选择，而不是只更新最后一次补装的部分。为防止写入越过目标项目边界，安全更新会拒绝包含符号链接的目标目录；请先将相关链接替换为项目内的真实文件或目录。
-
-直接调用提示缓存安装器时仍默认保留已有规则、观测资产和 skill。只有明确给出 `--apply --overwrite` 才会替换它们。
-
-## 8. 安全行为和幂等性
-
-- 首次操作优先使用 `--dry-run` 或 `--check`。
-- self-learning 的 `--overwrite` 不覆盖 `.learnings/`，也不删除无关 hook 配置。
-- env 的 `--overwrite` 会替换受管的 env 规则和检查脚本，但入口文件只更新对应 profile marker 区块。
-- workflow 安装器可重复执行；已有内容不同时必须显式使用 `--force`。
-- skill registry 只删除上次同步时已标记为受管、但现在已不存在的本地 skill。
-- 密钥审计不输出匹配到的凭证原文。
-
-## 9. 验证
-
-修改本模板仓库后，在仓库根目录执行：
+## 仓库验证
 
 ```bash
 scripts/validate.sh
-.codex/scripts/check-env-template.sh --strict
-.codex/scripts/sync-workflow-routing.sh --check
-skills/security-secret-audit/scripts/audit-secrets.sh
+bash .codex/scripts/check-env-template.sh --strict
+bash .codex/scripts/sync-workflow-routing.sh --check
+python3 scripts/validate-profiles.py
+python3 scripts/sync-runtime-skills.py --validate
+python3 scripts/check-docs.py
+skills/security-secret-audit/scripts/audit-secrets.sh --project --strict
 git diff --check
 ```
 
-`scripts/validate.sh` 包含语法检查、临时目录安装 smoke test 和 `tests/` 回归测试。GitHub Actions 会对 push 到 `main` 和 pull request 执行同类检查（覆盖 Ubuntu、macOS、Windows 三平台）。
+Workflow 最终阶段只有在 state frontmatter 设置 `quality_gate: passed` 后才能完成。临时 waiver 必须同时记录 owner 和 due date。
 
-其他辅助验证脚本：
+## 文档
 
-```bash
-# 验证 profile YAML 合同完整性
-python3 scripts/validate-profiles.py
-
-# 验证文档覆盖所有组件
-python3 scripts/check-docs.py
-
-# 将 skills/ 中规范源同步到 .agents/skills/（自身使用）
-python3 scripts/sync-runtime-skills.py
-```
-
-目标项目已有 `.env.example` 时，可验证 Codex 安装内容：
-
-```bash
-cd "$TARGET"
-.codex/scripts/check-env-template.sh --strict
-.codex/scripts/sync-workflow-routing.sh --check
-```
-
-Claude Code 对应路径为 `.claude/scripts/`，generic profile 对应路径为 `.agent/scripts/`。
-
-## 安装后的 Codex 目录示例
-
-```text
-target-project/
-├── .agents/skills/
-│   ├── digest/
-│   ├── maintain-learnings/
-│   ├── prompt-cache-optimizer/
-│   ├── sync-skill-registry/
-│   └── workflow-todo-state/
-├── .codex/
-│   ├── hooks/
-│   ├── rules/
-│   ├── scripts/
-│   └── workflows/
-├── .learnings/
-├── workspace/workflow-runs/
-├── .codex/hooks.json          # 由 bootstrap.py 生成（gitignored，每台主机不同）
-└── AGENTS.md
-```
-
-`.codex/hooks.json` 是受忽略的主机本地文件，由多 Agent 同步 runtime 的 `bootstrap.py` 自动生成（写入当前主机的 Python 解释器路径）。在克隆仓库后需先安装 `.agent-sync` 并执行 `bootstrap.py --apply` 生成该文件，而非手动提交。
-
-仅在项目已接通自动 LLM usage 采集时，才会额外出现 `/.llm/prompt-cache/`。
-
-## 本仓库的目录职责
-
-```text
-profiles/       内置 Agent 布局合同
-templates/      可安装的规则、hook 和初始文件
-skills/         可独立分发的 skill 包和工具
-.agents/        本仓库自身使用的 Codex skills（由 sync-runtime-skills.py 同步 skills/ 镜像）
-.codex/         本仓库自身使用的 rules、hooks 和 workflows
-.agent-sync/    多 Agent 同步 runtime
-scripts/        仓库级验证命令（validate.sh、install.py、sync-runtime-skills.py 等）
-tests/          安装、升级和状态转移回归测试
-docs/           便携性说明 + 设计方案（superpowers/）+ 完整功能文档
-```
-
-## 进一步阅读
-
-- [更新说明](CHANGELOG.md)
-- [跨 Agent 与跨平台接入](docs/PORTABILITY.md)
-- [功能与使用文档（完整版）](docs/Agent%20Template%20Kits%20—%20功能与使用文档.md)
-- [Agent profile 字段说明](profiles/README.md)
-- [自学习模板](templates/self-learning/README.md)
-- [提示缓存模板](templates/cache/README.md)
-- [环境变量模板](templates/env/README.md)
-- [Workflow Todo State](skills/workflow-todo-state/SKILL.md)
-- [Skill Registry](skills/sync-skill-registry/SKILL.md)
-- [Security Secret Audit](skills/security-secret-audit/SKILL.md)
-- [许可证](LICENSE)
+- [完整功能与使用文档](docs/Agent%20Template%20Kits%20%E2%80%94%20%E5%8A%9F%E8%83%BD%E4%B8%8E%E4%BD%BF%E7%94%A8%E6%96%87%E6%A1%A3.md)
+- [生成的 HTML 用户指南](docs/USER_GUIDE.html)
+- [可移植性与平台差异](docs/PORTABILITY.md)
 - [发布流程](RELEASING.md)
+- [变更记录](CHANGELOG.md)
+
+`docs/Agent Template Kits — 功能与使用文档.md` 是完整用户文档的 canonical source；HTML 由 `scripts/render-user-guide.py` 确定性生成。
+
+## License
+
+[MIT](LICENSE)

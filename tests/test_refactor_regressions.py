@@ -32,7 +32,10 @@ class RefactorRegressionTests(unittest.TestCase):
 
         for runner in ("ubuntu-latest", "macos-latest", "windows-latest"):
             self.assertIn(runner, workflow)
-        self.assertIn("actions/setup-python@", workflow)
+        self.assertIn('python: ["3.10", "3.x"]', workflow)
+        self.assertRegex(workflow, r"actions/checkout@[0-9a-f]{40}")
+        self.assertRegex(workflow, r"actions/setup-python@[0-9a-f]{40}")
+        self.assertIn("python-version: ${{ matrix.python }}", workflow)
         self.assertIn("shell: pwsh", workflow)
         self.assertIn("$env:RUNNER_TEMP", workflow)
         self.assertIn(".agent-sync/sync_agents.py", workflow)
@@ -40,6 +43,7 @@ class RefactorRegressionTests(unittest.TestCase):
         self.assertIn(".agent-sync/bootstrap.py", workflow)
         self.assertIn(".agent-sync/validate_portability.py", workflow)
         self.assertIn("bash scripts/validate.sh", workflow)
+        self.assertIn("audit-secrets.sh --project --strict", workflow)
 
     def test_ci_exits_after_every_native_python_failure(self) -> None:
         lines = (ROOT / ".github/workflows/validate.yml").read_text(
@@ -481,6 +485,31 @@ class RefactorRegressionTests(unittest.TestCase):
             self.assertIn("cannot block completed", result.stderr)
             self.assertIn("> [P0] ✅ 已完成", state.read_text(encoding="utf-8"))
 
+    def test_final_workflow_phase_requires_a_quality_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory) / "state.md"
+            shutil.copy2(
+                ROOT / "skills/workflow-todo-state/references/basic-state-template.md",
+                state,
+            )
+            script = "skills/workflow-todo-state/scripts/todo-state.sh"
+            for phase in ("P0", "P1"):
+                run("bash", script, str(state), "start", phase)
+                run("bash", script, str(state), "complete", phase)
+            run("bash", script, str(state), "start", "P2")
+
+            rejected = run("bash", script, str(state), "complete", "P2", check=False)
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertIn("final phase requires quality_gate", rejected.stderr)
+
+            text = state.read_text(encoding="utf-8").replace(
+                "quality_gate: pending",
+                "quality_gate: passed",
+            )
+            state.write_text(text, encoding="utf-8")
+            run("bash", script, str(state), "complete", "P2")
+            self.assertIn("current_status: complete", state.read_text(encoding="utf-8"))
+
     def test_registry_removes_only_previously_managed_skills(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory)
@@ -519,16 +548,65 @@ class RefactorRegressionTests(unittest.TestCase):
             self.assertIn("`external`", text)
             self.assertIn("<!-- skill-registry:managed [] -->", text)
 
-    def test_runtime_skill_mirrors_and_strict_env_template_are_current(self) -> None:
-        run(RUN_PYTHON, "scripts/sync-runtime-skills.py", "--check")
+    def test_runtime_skill_sources_and_strict_env_template_are_current(self) -> None:
+        run(RUN_PYTHON, "scripts/sync-runtime-skills.py", "--validate")
         result = run("bash", ".codex/scripts/check-env-template.sh", "--strict")
         self.assertIn("Env template check passed.", result.stdout)
+
+    def test_runtime_skill_bootstrap_reconciles_only_managed_skills(self) -> None:
+        with tempfile.TemporaryDirectory() as source_directory, tempfile.TemporaryDirectory() as target_directory:
+            source = Path(source_directory)
+            target = Path(target_directory)
+            shutil.copytree(ROOT / "profiles", source / "profiles")
+            (source / "skills").mkdir()
+            for name in ("alpha", "beta"):
+                skill = source / "skills" / name
+                (skill / "agents").mkdir(parents=True)
+                (skill / "SKILL.md").write_text(f"# {name}\n", encoding="utf-8")
+                (skill / "agents/openai.yaml").write_text("interface:\n  display_name: Test\n", encoding="utf-8")
+            (source / "skills-lock.json").write_text(
+                json.dumps({"version": 2, "sources": {}, "skills": {}}) + "\n",
+                encoding="utf-8",
+            )
+            command = (
+                RUN_PYTHON,
+                "scripts/sync-runtime-skills.py",
+                "--source-root",
+                str(source),
+                "--root",
+                str(target),
+                "--profile",
+                "codex",
+                "--profile",
+                "claude",
+            )
+            run(*command, "--apply")
+
+            self.assertTrue((target / ".agents/skills/alpha/agents/openai.yaml").is_file())
+            self.assertFalse((target / ".claude/skills/alpha/agents").exists())
+            manual = target / ".agents/skills/manual/SKILL.md"
+            manual.parent.mkdir(parents=True)
+            manual.write_text("# Manual\n", encoding="utf-8")
+            stale_file = target / ".agents/skills/alpha/stale.txt"
+            stale_file.write_text("stale\n", encoding="utf-8")
+
+            drift = run(*command, "--check", check=False)
+            self.assertEqual(drift.returncode, 1)
+            self.assertIn("updated: codex:alpha", drift.stdout)
+            run(*command, "--apply")
+            self.assertFalse(stale_file.exists())
+
+            shutil.rmtree(source / "skills/beta")
+            run(*command, "--apply")
+            self.assertFalse((target / ".agents/skills/beta").exists())
+            self.assertFalse((target / ".claude/skills/beta").exists())
+            self.assertTrue(manual.is_file())
 
     def test_agent_runtime_workflow_installer_uses_all_profile_contracts(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             run(
                 "bash",
-                ".agents/skills/workflow-todo-state/scripts/install.sh",
+                "skills/workflow-todo-state/scripts/install.sh",
                 directory,
                 "--profile",
                 "codebuddy",

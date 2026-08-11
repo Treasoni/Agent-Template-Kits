@@ -10,10 +10,10 @@
 | `templates/` | 可安装的规则、hook 和初始文件（self-learning / env / cache） |
 | `skills/` | 可独立分发的 skill 包（共 7 个） |
 | `scripts/` | 仓库级工具：`install.py`（统一安装器）、`validate.sh`、`validate-profiles.py`、`check-docs.py`、`sync-runtime-skills.py` |
-| `.agents/skills/` | 本仓库自身使用的 Codex skills（由 `sync-runtime-skills.py` 从 `skills/` 同步） |
+| `.agents/skills/` | gitignored Codex runtime adapter，由 canonical/locked source 生成 |
 | `.codex/` | 本仓库自身的 rules、hooks、scripts、workflows |
-| `.claude/skills/` | 本仓库自身的 Claude Code skills |
-| `.agent-sync/` | 多 Agent 同步 runtime |
+| `.claude/skills/` | gitignored Claude Code runtime adapter |
+| `.agent-sync/` | 可选、gitignored 的多 Agent 同步 runtime |
 | `tests/` | 回归测试（`test_*_sync.py`、`test_quality_guards.py`、`test_refactor_regressions.py`） |
 | `docs/` | 便携性说明、设计规划文档（superpowers/）、完整功能文档 |
 | `.learnings/` | 自学习记录（RULES.md、ERRORS.md、LEARNINGS.md） |
@@ -31,7 +31,7 @@
 .codex/scripts/sync-workflow-routing.sh --check
 
 # 密钥审计
-skills/security-secret-audit/scripts/audit-secrets.sh
+skills/security-secret-audit/scripts/audit-secrets.sh --project --strict
 
 # Profile YAML 合同验证
 python3 scripts/validate-profiles.py
@@ -39,8 +39,8 @@ python3 scripts/validate-profiles.py
 # 文档覆盖率检查
 python3 scripts/check-docs.py
 
-# Skill 镜像同步检查
-python3 scripts/sync-runtime-skills.py --check
+# Canonical/lock source 合同检查
+python3 scripts/sync-runtime-skills.py --validate
 
 # Git diff 检查
 git diff --check
@@ -77,7 +77,7 @@ python3 -m pytest tests/test_quality_guards.py -v
    - `assets/`（schema、模板等）
    - `agents/openai.yaml`（可选，OpenAI 兼容配置）
 2. 如需要跨 profile 分发，将 skill 加入 `multi-agent-sync` 的 sync scope
-3. 运行 `python3 scripts/sync-runtime-skills.py` 将 skill 同步到 `.agents/skills/`
+3. 运行 `python3 scripts/sync-runtime-skills.py --validate`；仅用 `--apply` 刷新 gitignored 本机 runtime
 4. 更新 `README.md` 和 `docs/` 中的组件说明
 
 ### 发布流程
@@ -98,7 +98,7 @@ python3 -m pytest tests/test_quality_guards.py -v
 
 ## 关键约定
 
-- `.codex/hooks.json`、`.claude/settings.json`、`.agent-sync/local/` 等是 **gitignored 的主机本地文件**，由 `bootstrap.py` 生成。克隆仓库后需执行 `python3 .agent-sync/scripts/bootstrap.py --apply`
+- `.agents/skills/`、`.claude/skills/`、`.agent-runtime/`、`.agent-sync/` 和 host settings 都是 **gitignored 生成内容**。克隆后先运行 `python3 scripts/sync-runtime-skills.py --apply`
 - 安装器（`scripts/install.py`）默认 **只预览不写入**，需要显式 `--apply`
 - Skill 注册表只管理它之前创建过的 entries，保留手工添加的外部条目
 - Workflow routing 更新后必须运行 `sync-workflow-routing.sh --check` 通过
@@ -121,10 +121,11 @@ python3 -m pytest tests/test_quality_guards.py -v
 - Before task work, apply `.learnings/RULES.md`, `.learnings/ERRORS.md`, and recent `.learnings/LEARNINGS.md`.
 - Codex loads the learning reminder through `.codex/hooks/read_learnings.py`. After a fresh clone, install `.agent-sync` and run its `bootstrap.py --apply` command to create the ignored `.codex/hooks.json` for the current host.
 - Record real recurring mistakes or reusable lessons in `.learnings/`, but fix the source skill, template, hook, script, or project rule before archiving resolved records.
-- Shared Codex skills live under `.agents/skills/`. Keep their distributable source in sync with:
+- Shared skill sources live under `skills/`; validate and generate local runtime with:
 
 ```bash
-python3 scripts/sync-runtime-skills.py --check
+python3 scripts/sync-runtime-skills.py --validate
+python3 scripts/sync-runtime-skills.py --apply
 ```
 
 - Cross-profile configuration synchronization belongs to `multi-agent-sync`. When `.agent-sync/` is installed, preview with `python3 .agent-sync/sync_agents.py --check --scope skills` and apply only the affected scope.
@@ -141,7 +142,7 @@ python3 scripts/sync-runtime-skills.py --check
 <!-- workflow-todo-state:start -->
 ## Workflow Todo State
 
-Named workflow state files are the source of truth for every routed workflow.
+Named workflow state files are the source of truth while a routed workflow is active.
 
 - Workflow definitions live under `.codex/workflows/{workflow-id}/`.
 - Workflow state files live under `workspace/workflow-runs/` and should be named after the task, for example `payment-refactor.workflow.md`.
@@ -150,7 +151,9 @@ Named workflow state files are the source of truth for every routed workflow.
 - If the route is ambiguous, ask the user before acting.
 - Read the active workflow state file before starting any phase; do not skip prerequisite phases.
 - Change phase state only through `.codex/scripts/todo-state.sh`.
-- Use one unique phase status line per phase, for example `> [P0] ⬜ 未开始`.
+- Use one unique phase status line per phase, for example `> [P0] ⬜ 未开始 {not_started}`.
+- The final phase requires `quality_gate: passed`; a temporary waiver also requires an owner and due date.
+- Completed run states are removed or archived according to repository policy and do not replace changelogs or release notes.
 - On resume after interruption, inspect the YAML frontmatter and current phase before acting.
 - Each workflow directory must contain a `routing.yaml`. After creating, changing, renaming, or deleting a workflow, run `.codex/scripts/sync-workflow-routing.sh`; the update is incomplete until `.codex/scripts/sync-workflow-routing.sh --check` passes.
 <!-- workflow-todo-state:end -->

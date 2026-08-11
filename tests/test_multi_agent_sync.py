@@ -45,19 +45,19 @@ def seed_declared_canonical_assets(root: Path):
 
 
 class MultiAgentSyncTests(unittest.TestCase):
-    def test_runtime_skill_registry_manages_multi_agent_sync(self):
+    def test_runtime_skill_sources_include_canonical_multi_agent_sync(self):
         registry = load_module(
             "runtime_skill_sync",
             "../../../scripts/sync-runtime-skills.py",
         )
 
-        self.assertIn(
-            (
-                Path("skills/multi-agent-sync"),
-                Path(".agents/skills/multi-agent-sync"),
-            ),
-            registry.MIRRORS,
-        )
+        sources = registry.canonical_skills(ROOT)
+
+        self.assertIn("multi-agent-sync", sources)
+        self.assertEqual(sources["multi-agent-sync"].path, PACKAGE)
+        self.assertEqual(sources["multi-agent-sync"].origin, "canonical")
+        self.assertIn("digest", sources)
+        self.assertIn("maintain-learnings", sources)
 
     def test_validator_reports_absolute_path_shell_hook_and_crlf(self):
         validator = load_module("validate_portability", "validate_portability.py")

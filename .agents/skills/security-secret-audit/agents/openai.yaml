@@ -1,4 +1,0 @@
-interface:
-  display_name: "Security Secret Audit"
-  short_description: "Audit repositories for exposed secrets and project-security risks"
-  default_prompt: "Use $security-secret-audit to scan this repository for exposed credentials and high-confidence project-security risks before I commit."

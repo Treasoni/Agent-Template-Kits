@@ -20,6 +20,25 @@ from pathlib import Path
 
 TEMPLATE_ROOT = Path(__file__).resolve().parent
 PROFILE_ROOT = TEMPLATE_ROOT.parent.parent / "profiles"
+REPOSITORY_SCRIPT_DIR = TEMPLATE_ROOT.parent.parent / "scripts"
+if str(REPOSITORY_SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_SCRIPT_DIR))
+
+try:
+    from profile_contract import load_profiles as load_profile_contracts, parse_flat_yaml  # noqa: E402
+except ModuleNotFoundError:
+    def parse_flat_yaml(path: Path) -> tuple[dict[str, str], list[str]]:
+        values: dict[str, str] = {}
+        for raw_line in path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if line and not line.startswith("#") and ":" in line:
+                key, value = line.split(":", 1)
+                values[key.strip()] = value.strip().strip('"\'')
+        return values, []
+
+    def load_profile_contracts(_profile_root: Path) -> dict[str, object]:
+        return {}
+
 SKILLS = ("digest", "maintain-learnings")
 
 
@@ -34,31 +53,18 @@ class AgentProfile:
     rules_file: str = "AGENTS.md"
 
 
-def parse_flat_yaml(path: Path) -> dict[str, str]:
-    """Read the scalar-only profile format without adding a YAML dependency."""
-    values: dict[str, str] = {}
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or ":" not in line:
-            continue
-        key, value = line.split(":", 1)
-        values[key.strip()] = value.strip().strip('"\'')
-    return values
-
-
 def load_builtin_profiles() -> dict[str, AgentProfile]:
     profiles: dict[str, AgentProfile] = {}
-    for path in sorted(PROFILE_ROOT.glob("*.yaml")):
-        values = parse_flat_yaml(path)
-        name = values.get("name", path.stem)
+    for contract in load_profile_contracts(PROFILE_ROOT).values():
+        name = contract.name
         profiles[name] = AgentProfile(
             name=name,
-            skills_dir=values["skills_dir"],
-            hooks_dir=values.get("hooks_dir") or None,
-            hook_config=values.get("hook_config") or None,
-            hook_template=values.get("hook_template") or None,
-            include_openai_yaml=values.get("include_openai_yaml", "false").lower() == "true",
-            rules_file=values.get("entry_file", "AGENTS.md"),
+            skills_dir=contract.skills_dir,
+            hooks_dir=contract.hooks_dir or None,
+            hook_config=contract.hook_config or None,
+            hook_template=contract.hook_template or None,
+            include_openai_yaml=contract.include_openai_yaml,
+            rules_file=contract.entry_file,
         )
     if profiles:
         return profiles
@@ -91,7 +97,9 @@ DEFAULT_PYTHON_COMMAND = Path(sys.executable).name if os.name == "nt" else "pyth
 
 def load_profile_file(path: str | Path) -> AgentProfile:
     profile_path = Path(path).resolve()
-    values = parse_flat_yaml(profile_path)
+    values, findings = parse_flat_yaml(profile_path)
+    if findings:
+        raise argparse.ArgumentTypeError("; ".join(findings))
     name = values.get("name", profile_path.stem)
     if "skills_dir" not in values:
         raise argparse.ArgumentTypeError(f"profile is missing skills_dir: {profile_path}")

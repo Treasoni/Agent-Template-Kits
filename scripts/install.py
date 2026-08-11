@@ -26,6 +26,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PROFILE_ROOT = ROOT / "profiles"
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from profile_contract import ProfileContract as Profile, load_profiles as load_profile_contracts  # noqa: E402
+
 COMPONENTS = ("self-learning", "env", "prompt-cache", "workflow", "manifest-platform", "registry", "multi-agent-sync")
 DEFAULT_COMPONENTS = ("self-learning", "env", "prompt-cache", "workflow", "registry")
 STATE_DIRECTORY = ".agent-template-kits"
@@ -34,19 +40,6 @@ STATE_SCHEMA_VERSION = 2
 SNAPSHOT_IGNORED_PARTS = {".git", STATE_DIRECTORY, "__pycache__"}
 GLOBAL_COMPONENTS = frozenset({"multi-agent-sync"})
 INSTALLER_BACKUP_PART = re.compile(r".+\.bak\.\d{14}$")
-
-
-@dataclass(frozen=True)
-class Profile:
-    name: str
-    description: str
-    agent_dir: str
-    skills_dir: str
-    rules_dir: str
-    scripts_dir: str
-    hooks_dir: str
-    entry_file: str
-    hook_config: str
 
 
 @dataclass(frozen=True)
@@ -65,39 +58,11 @@ class InstallSelections:
         return [(profiles[name], components) for name, components in self.profile_components.items()]
 
 
-def parse_flat_yaml(path: Path) -> dict[str, str]:
-    """Read the repository's scalar-only profile files without PyYAML."""
-    values: dict[str, str] = {}
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or ":" not in line:
-            continue
-        key, value = line.split(":", 1)
-        values[key.strip()] = value.strip().strip("\"'")
-    return values
-
-
 def load_profiles() -> dict[str, Profile]:
-    profiles: dict[str, Profile] = {}
-    for path in sorted(PROFILE_ROOT.glob("*.yaml")):
-        values = parse_flat_yaml(path)
-        required = ("name", "agent_dir", "skills_dir", "rules_dir", "scripts_dir", "entry_file")
-        missing = [key for key in required if not values.get(key)]
-        if missing:
-            raise SystemExit(f"profile {path} is missing: {', '.join(missing)}")
-        profile = Profile(
-            name=values["name"],
-            description=values.get("description", ""),
-            agent_dir=values["agent_dir"],
-            skills_dir=values["skills_dir"],
-            rules_dir=values["rules_dir"],
-            scripts_dir=values["scripts_dir"],
-            hooks_dir=values.get("hooks_dir", ""),
-            entry_file=values["entry_file"],
-            hook_config=values.get("hook_config", ""),
-        )
-        profiles[profile.name] = profile
-    return profiles
+    try:
+        return load_profile_contracts(PROFILE_ROOT)
+    except ValueError as error:
+        raise SystemExit(str(error)) from error
 
 
 def is_unambiguous_entry(entry_file: str) -> bool:
@@ -334,7 +299,7 @@ def commands_for(profile: Profile, target: Path, components: tuple[str, ...], ar
     if "manifest-platform" in components:
         command = [
             bash,
-            str(ROOT / ".agents/skills/manifest-platform/scripts/install.sh"),
+            str(ROOT / "skills/manifest-platform/scripts/install.sh"),
             "--target",
             str(target),
             "--agent-dir",

@@ -3,654 +3,465 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="source-sha256" content="18896faca15a6e53632fc136fb5628bf8936d479e8970335a4e3de19ed25624b">
 <title>Agent Template Kits — 功能与使用文档</title>
-<style>
-:root {
-  --bg: #0d1117;
-  --bg-secondary: #161b22;
-  --bg-tertiary: #21262d;
-  --border: #30363d;
-  --text: #c9d1d9;
-  --text-bright: #f0f6fc;
-  --text-dim: #8b949e;
-  --accent: #58a6ff;
-  --accent-dim: #1f6feb;
-  --green: #3fb950;
-  --yellow: #d29922;
-  --red: #f85149;
-  --purple: #bc8cff;
-  --orange: #db6d28;
-  --teal: #39c5cf;
-  --pink: #f778ba;
-  --code-bg: #0d1117;
-  --inline-code-bg: #1c2128;
-}
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', Helvetica, Arial, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  line-height: 1.7;
-  font-size: 15px;
-}
-code, pre { font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', monospace; }
-
-/* Layout */
-.page { display: flex; max-width: 1400px; margin: 0 auto; }
-.sidebar {
-  width: 280px; min-width: 280px; height: 100vh; position: sticky; top: 0;
-  overflow-y: auto; background: var(--bg-secondary); border-right: 1px solid var(--border);
-  padding: 24px 16px;
-}
-.sidebar h2 { font-size: 14px; color: var(--text-bright); margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); letter-spacing: .5px; }
-.sidebar nav ul { list-style: none; }
-.sidebar nav li { margin-bottom: 2px; }
-.sidebar nav a {
-  display: block; padding: 6px 12px; color: var(--text-dim); text-decoration: none;
-  font-size: 13px; border-radius: 6px; transition: all .15s; border-left: 2px solid transparent;
-}
-.sidebar nav a:hover { color: var(--text-bright); background: var(--bg-tertiary); }
-.sidebar nav a.active { color: var(--accent); background: rgba(56,139,253,.1); border-left-color: var(--accent); }
-.sidebar nav a.sub { padding-left: 28px; font-size: 12px; }
-.content { flex: 1; padding: 48px 56px; max-width: 1100px; min-width: 0; }
-
-/* Typography */
-h1 { font-size: 32px; color: var(--text-bright); margin-bottom: 8px; font-weight: 700; letter-spacing: -.5px; }
-h2 { font-size: 24px; color: var(--text-bright); margin-top: 48px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border); font-weight: 600; }
-h3 { font-size: 18px; color: var(--text-bright); margin-top: 32px; margin-bottom: 12px; font-weight: 600; }
-h4 { font-size: 15px; color: var(--accent); margin-top: 20px; margin-bottom: 8px; font-weight: 600; }
-p { margin-bottom: 14px; }
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
-blockquote {
-  margin: 16px 0; padding: 12px 20px; background: var(--bg-secondary);
-  border-left: 3px solid var(--accent-dim); border-radius: 0 6px 6px 0; color: var(--text-dim);
-}
-blockquote p { margin: 4px 0; }
-strong { color: var(--text-bright); }
-hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
-ul, ol { margin: 12px 0 14px 24px; }
-li { margin-bottom: 6px; }
-
-/* Code */
-pre {
-  background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
-  padding: 16px 20px; overflow-x: auto; margin: 14px 0; font-size: 13px; line-height: 1.6;
-}
-code { font-size: 13px; }
-p > code, li > code, td > code {
-  background: var(--inline-code-bg); padding: 2px 6px; border-radius: 4px;
-  color: var(--orange); font-size: 13px;
-}
-.tok-keyword { color: var(--purple); }
-.tok-string { color: var(--green); }
-.tok-comment { color: var(--text-dim); font-style: italic; }
-.tok-flag { color: var(--yellow); }
-.tok-path { color: var(--teal); }
-.tok-number { color: var(--orange); }
-
-/* Tables */
-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
-th { background: var(--bg-tertiary); color: var(--text-bright); text-align: left; padding: 10px 14px; border: 1px solid var(--border); font-weight: 600; }
-td { padding: 10px 14px; border: 1px solid var(--border); color: var(--text); vertical-align: top; }
-tr:nth-child(even) td { background: var(--bg-secondary); }
-
-/* Cards */
-.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin: 20px 0; }
-.card {
-  background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px;
-  padding: 20px; transition: border-color .2s, transform .2s;
-}
-.card:hover { border-color: var(--accent-dim); transform: translateY(-2px); }
-.card .icon { font-size: 24px; margin-bottom: 10px; }
-.card h4 { margin-top: 0; }
-.card p { color: var(--text-dim); font-size: 13px; margin-bottom: 0; }
-
-/* Badges */
-.badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
-.badge {
-  display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px;
-  font-weight: 600; border: 1px solid var(--border); background: var(--bg-tertiary);
-  color: var(--text-bright); cursor: default; transition: all .15s;
-}
-.badge:hover { border-color: var(--accent); color: var(--accent); }
-.badge.has-hooks { border-color: var(--green); }
-.badge.has-hooks:hover { background: rgba(63,185,80,.1); }
-
-/* Steps */
-.steps { display: flex; gap: 24px; margin: 24px 0; flex-wrap: wrap; }
-.step { flex: 1; min-width: 220px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px; padding: 20px; position: relative; }
-.step .num { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-dim); color: var(--text-bright); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; margin-bottom: 12px; }
-.step h4 { margin-top: 0; color: var(--text-bright); }
-.step p { color: var(--text-dim); font-size: 13px; margin-bottom: 0; }
-
-/* FAQ */
-.faq-item { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; overflow: hidden; }
-.faq-q { padding: 14px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: var(--bg-secondary); font-weight: 600; color: var(--text-bright); font-size: 14px; transition: background .15s; }
-.faq-q:hover { background: var(--bg-tertiary); }
-.faq-q .arrow { transition: transform .2s; color: var(--text-dim); }
-.faq-q.open .arrow { transform: rotate(90deg); }
-.faq-a { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
-.faq-a.open { max-height: 600px; }
-.faq-a-inner { padding: 16px 20px; color: var(--text-dim); font-size: 14px; }
-
-/* Tree */
-.tree-block { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; margin: 14px 0; overflow-x: auto; }
-.tree-block pre { margin: 0; border: none; padding: 0; }
-
-/* Header block */
-.header-block { margin-bottom: 32px; }
-.header-block .meta { color: var(--text-dim); font-size: 13px; line-height: 1.8; }
-.header-block .meta span { display: inline-block; padding: 2px 10px; background: var(--bg-tertiary); border-radius: 4px; margin-right: 6px; }
-
-/* Section anchors */
-section { scroll-margin-top: 20px; }
-
-/* Mobile */
-@media (max-width: 900px) {
-  .sidebar { display: none; }
-  .content { padding: 24px 20px; }
-}
-</style>
+<style>:root{color-scheme:dark;--bg:#0d1117;--panel:#161b22;--border:#30363d;--text:#c9d1d9;--bright:#f0f6fc;--dim:#8b949e;--accent:#58a6ff;--code:#010409}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC",sans-serif}
+.page{display:flex;max-width:1440px;margin:auto}.sidebar{position:sticky;top:0;width:285px;min-width:285px;height:100vh;overflow:auto;padding:24px 18px;background:var(--panel);border-right:1px solid var(--border)}
+.sidebar strong{display:block;margin-bottom:14px;color:var(--bright)}.sidebar a{display:block;padding:5px 8px;color:var(--dim);text-decoration:none;border-radius:5px}.sidebar a:hover{color:var(--accent);background:#21262d}.sidebar .sub{padding-left:24px;font-size:13px}
+main{min-width:0;max-width:1080px;padding:44px 58px}h1,h2,h3,h4{color:var(--bright);line-height:1.3}h1{font-size:32px}h2{margin-top:48px;padding-bottom:10px;border-bottom:1px solid var(--border)}h3{margin-top:30px}a{color:var(--accent)}
+code,pre{font-family:"SFMono-Regular",Consolas,monospace}code{padding:2px 5px;background:#1c2128;border-radius:4px;color:#ffa657}pre{overflow:auto;padding:16px 18px;background:var(--code);border:1px solid var(--border);border-radius:8px}pre code{padding:0;background:none;color:var(--text)}
+blockquote{margin:16px 0;padding:10px 18px;background:var(--panel);border-left:3px solid var(--accent)}table{width:100%;border-collapse:collapse;margin:16px 0}th,td{padding:9px 12px;border:1px solid var(--border);vertical-align:top}th{background:#21262d;color:var(--bright)}tr:nth-child(even) td{background:var(--panel)}hr{border:0;border-top:1px solid var(--border);margin:38px 0}li{margin:4px 0}
+.source-note{margin-top:48px;color:var(--dim);font-size:13px;text-align:center}@media(max-width:900px){.sidebar{display:none}main{padding:24px 20px}}</style>
 </head>
 <body>
+<!-- Generated by scripts/render-user-guide.py from docs/Agent Template Kits — 功能与使用文档.md. -->
 <div class="page">
-<nav class="sidebar">
-  <h2>Agent Template Kits</h2>
-  <nav>
-    <ul>
-      <li><a href="#sec-1">1. 产品概述</a></li>
-      <li><a href="#sec-2">2. 核心功能</a>
-        <ul>
-          <li><a href="#sec-2-1" class="sub">2.1 自学习系统</a></li>
-          <li><a href="#sec-2-2" class="sub">2.2 提示缓存优化</a></li>
-          <li><a href="#sec-2-3" class="sub">2.3 环境变量规范</a></li>
-          <li><a href="#sec-2-4" class="sub">2.4 可恢复 Workflow</a></li>
-          <li><a href="#sec-2-5" class="sub">2.5 技能注册表</a></li>
-          <li><a href="#sec-2-6" class="sub">2.6 密钥安全审计</a></li>
-          <li><a href="#sec-2-7" class="sub">2.7 多 Agent 同步</a></li>
-          <li><a href="#sec-2-8" class="sub">2.8 Manifest Platform</a></li>
-        </ul>
-      </li>
-      <li><a href="#sec-3">3. 支持的 AI 编程助手</a></li>
-      <li><a href="#sec-4">4. 运行环境要求</a></li>
-      <li><a href="#sec-5">5. 快速开始</a></li>
-      <li><a href="#sec-6">6. 统一安装器详解</a></li>
-      <li><a href="#sec-7">7. 各功能模块详解</a></li>
-      <li><a href="#sec-8">8. 自定义 Agent 接入</a></li>
-      <li><a href="#sec-9">9. 更新已安装的模板</a></li>
-      <li><a href="#sec-10">10. 安全与幂等性保障</a></li>
-      <li><a href="#sec-11">11. 验证与质量检查</a></li>
-      <li><a href="#sec-12">12. 常见问题</a></li>
-      <li><a href="#sec-13">13. 目录结构参考</a></li>
-      <li><a href="#sec-14">14. 发布流程</a></li>
-    </ul>
-  </nav>
-</nav>
-
-<main class="content">
-
-<div class="header-block">
-  <h1>Agent Template Kits</h1>
-  <p style="font-size: 18px; color: var(--accent); margin-bottom: 16px;">功能与使用文档</p>
-  <div class="meta">
-    <span>版本：Unreleased</span>
-    <span>适用对象：开发团队</span>
-    <span>定位：产品功能说明 + 快速上手指南</span>
-  </div>
-</div>
-
-<!-- 1. 产品概述 -->
-<section id="sec-1">
-<h2>1. 产品概述</h2>
+<nav class="sidebar"><strong>Agent Template Kits</strong><a href="#1-产品概述">1. 产品概述</a><a href="#解决什么问题" class="sub">解决什么问题</a><a href="#设计理念" class="sub">设计理念</a><a href="#2-核心功能">2. 核心功能</a><a href="#2-1-自学习系统-self-learning" class="sub">2.1 自学习系统（Self-Learning）</a><a href="#2-2-提示缓存优化-prompt-cache-optimizer" class="sub">2.2 提示缓存优化（Prompt Cache Optimizer）</a><a href="#2-3-环境变量规范-env-template" class="sub">2.3 环境变量规范（Env Template）</a><a href="#2-4-可恢复-workflow-workflow-todo-state" class="sub">2.4 可恢复 Workflow（Workflow Todo State）</a><a href="#2-5-技能注册表同步-skill-registry" class="sub">2.5 技能注册表同步（Skill Registry）</a><a href="#2-6-密钥安全审计-security-secret-audit" class="sub">2.6 密钥安全审计（Security Secret Audit）</a><a href="#2-7-多-agent-同步-multi-agent-sync" class="sub">2.7 多 Agent 同步（Multi-Agent Sync）</a><a href="#2-8-agent-manifest-platform" class="sub">2.8 Agent Manifest Platform</a><a href="#3-支持的-ai-编程助手">3. 支持的 AI 编程助手</a><a href="#4-运行环境要求">4. 运行环境要求</a><a href="#5-快速开始">5. 快速开始</a><a href="#第一步-获取模板" class="sub">第一步：获取模板</a><a href="#第二步-指定目标项目" class="sub">第二步：指定目标项目</a><a href="#第三步-自动检测并安装-推荐" class="sub">第三步：自动检测并安装（推荐）</a><a href="#6-统一安装器详解">6. 统一安装器详解</a><a href="#6-1-可选组件" class="sub">6.1 可选组件</a><a href="#6-2-安装器行为" class="sub">6.2 安装器行为</a><a href="#6-3-关键参数" class="sub">6.3 关键参数</a><a href="#7-各功能模块详解">7. 各功能模块详解</a><a href="#7-1-安装自学习系统" class="sub">7.1 安装自学习系统</a><a href="#7-2-安装提示缓存优化" class="sub">7.2 安装提示缓存优化</a><a href="#7-3-安装环境变量规范" class="sub">7.3 安装环境变量规范</a><a href="#7-4-安装可恢复-workflow" class="sub">7.4 安装可恢复 Workflow</a><a href="#7-5-安装技能注册表" class="sub">7.5 安装技能注册表</a><a href="#7-6-密钥安全审计" class="sub">7.6 密钥安全审计</a><a href="#7-7-多-agent-同步" class="sub">7.7 多 Agent 同步</a><a href="#7-8-manifest-platform" class="sub">7.8 Manifest Platform</a><a href="#8-自定义-agent-接入">8. 自定义 Agent 接入</a><a href="#方式一-创建-yaml-profile-推荐" class="sub">方式一：创建 YAML Profile（推荐）</a><a href="#方式二-使用命令行参数" class="sub">方式二：使用命令行参数</a><a href="#9-更新已安装的模板">9. 更新已安装的模板</a><a href="#9-1-选择可信版本" class="sub">9.1 选择可信版本</a><a href="#9-2-预览更新" class="sub">9.2 预览更新</a><a href="#9-3-处理冲突" class="sub">9.3 处理冲突</a><a href="#9-4-应用更新" class="sub">9.4 应用更新</a><a href="#9-5-首次迁移旧项目" class="sub">9.5 首次迁移旧项目</a><a href="#9-6-提示缓存升级" class="sub">9.6 提示缓存升级</a><a href="#10-安全与幂等性保障">10. 安全与幂等性保障</a><a href="#11-验证与质量检查">11. 验证与质量检查</a><a href="#模板仓库自检" class="sub">模板仓库自检</a><a href="#辅助验证脚本" class="sub">辅助验证脚本</a><a href="#目标项目验证" class="sub">目标项目验证</a><a href="#12-常见问题">12. 常见问题</a><a href="#q-安装器会修改我的项目代码吗" class="sub">Q: 安装器会修改我的项目代码吗？</a><a href="#q-我的项目已经有-hook-配置-安装会覆盖吗" class="sub">Q: 我的项目已经有 hook 配置，安装会覆盖吗？</a><a href="#q-windows-上可以使用吗" class="sub">Q: Windows 上可以使用吗？</a><a href="#q-提示缓存的可观测性-with-observability-什么时候用" class="sub">Q: 提示缓存的可观测性（<code>--with-observability</code>）什么时候用？</a><a href="#q-密钥审计能检测哪些类型的凭证" class="sub">Q: 密钥审计能检测哪些类型的凭证？</a><a href="#q-安装后如何卸载" class="sub">Q: 安装后如何卸载？</a><a href="#q-更新模板时我的定制内容会被覆盖吗" class="sub">Q: 更新模板时我的定制内容会被覆盖吗？</a><a href="#q-多-agent-同步的-bootstrap-py-生成的文件需要提交吗" class="sub">Q: 多 Agent 同步的 bootstrap.py 生成的文件需要提交吗？</a><a href="#13-目录结构参考">13. 目录结构参考</a><a href="#安装后的目标项目-以-codex-为例" class="sub">安装后的目标项目（以 Codex 为例）</a><a href="#本模板仓库的目录职责" class="sub">本模板仓库的目录职责</a><a href="#14-发布流程">14. 发布流程</a><a href="#发布前" class="sub">发布前</a><a href="#发布" class="sub">发布</a><a href="#进一步阅读">进一步阅读</a></nav>
+<main><h1 id="agent-template-kits-功能与使用文档">Agent Template Kits — 功能与使用文档</h1>
+<blockquote><p>版本：<code>v0.1.0</code> 发布候选基线<br>适用对象：需要在 AI 编程助手中引入工程化能力的开发团队<br>文档定位：面向客户的产品功能说明 + 快速上手指南</p></blockquote>
+<hr>
+<h2 id="目录">目录</h2>
+<ol><li><a href="#1-产品概述">产品概述</a></li><li><a href="#2-核心功能">核心功能</a></li><li><a href="#3-支持的-ai-编程助手">支持的 AI 编程助手</a></li><li><a href="#4-运行环境要求">运行环境要求</a></li><li><a href="#5-快速开始">快速开始</a></li><li><a href="#6-统一安装器详解">统一安装器详解</a></li><li><a href="#7-各功能模块详解">各功能模块详解</a></li><li><a href="#8-自定义-agent-接入">自定义 Agent 接入</a></li><li><a href="#9-更新已安装的模板">更新已安装的模板</a></li><li><a href="#10-安全与幂等性保障">安全与幂等性保障</a></li><li><a href="#11-验证与质量检查">验证与质量检查</a></li><li><a href="#12-常见问题">常见问题</a></li><li><a href="#13-目录结构参考">目录结构参考</a></li><li><a href="#14-发布流程">发布流程</a></li></ol>
+<hr>
+<h2 id="1-产品概述">1. 产品概述</h2>
 <p>Agent Template Kits 是一组<strong>可移植、可安装</strong>的 AI Agent 工程模板。它不是需要部署的应用，而是一套"模板源"——你将它克隆到本地，然后通过安装器把所需能力写入你的目标项目。</p>
-
-<h3>解决什么问题</h3>
-<table>
-  <tr><th>痛点</th><th>本产品提供的方案</th></tr>
-  <tr><td>AI 编程助手每次会话从零开始，不记住历史经验</td><td><strong>自学习系统</strong>：自动读取经验库，持续积累规则与纠错记录</td></tr>
-  <tr><td>提示词结构混乱，LLM 缓存命中率低，调用成本高</td><td><strong>提示缓存优化</strong>：规范提示布局，降低 token 消耗和延迟</td></tr>
-  <tr><td>环境变量管理混乱，容易泄露密钥</td><td><strong>环境变量规范</strong>：统一 <code>.env.example</code> 维护，自动检查缺失和可疑凭证</td></tr>
-  <tr><td>长任务中断后无法恢复，缺乏流程管控</td><td><strong>可恢复 Workflow</strong>：基于状态机的阶段管理，支持中断恢复</td></tr>
-  <tr><td>技能散落各处，无法统一管理</td><td><strong>技能注册表</strong>：自动扫描和同步所有 SKILL.md 元数据</td></tr>
-  <tr><td>提交代码前没有密钥安全检查</td><td><strong>密钥审计</strong>：扫描 Git 工作树中的 API Key、Token、密码和私钥</td></tr>
-  <tr><td>多个 AI 助手之间配置不同步，手动维护易出错</td><td><strong>多 Agent 同步</strong>：以一个 canonical profile 为源，自动同步到其他 Agent</td></tr>
-  <tr><td>缺乏资产版本和权限的可验证合同</td><td><strong>Manifest Platform</strong>：为 workflow、skill、hook 建立可验证的注册表与权限合同</td></tr>
-</table>
-
-<h3>设计理念</h3>
-<ul>
-  <li><strong>模板源而非应用</strong>：克隆后安装到目标项目，不改动目标项目已有结构</li>
-  <li><strong>安全优先</strong>：所有操作默认 dry-run 预览，确认后才执行</li>
-  <li><strong>幂等可重复</strong>：安装器可安全重复执行，不会覆盖已有定制内容</li>
-  <li><strong>跨平台跨 Agent</strong>：一套模板，适配 12 种主流 AI 编程助手，支持 Linux、macOS、Windows</li>
-  <li><strong>可追溯更新</strong>：通过 <code>install-state.json</code> 记录已安装的 profile、组件和文件指纹，安全更新时能区分模板变更与项目定制内容</li>
-</ul>
-</section>
-
-<!-- 2. 核心功能 -->
-<section id="sec-2">
-<h2>2. 核心功能</h2>
+<h3 id="解决什么问题">解决什么问题</h3>
+<table><thead><tr><th>痛点</th><th>本产品提供的方案</th></tr></thead><tbody>
+<tr><td>AI 编程助手每次会话从零开始，不记住历史经验</td><td><strong>自学习系统</strong>：自动读取经验库，持续积累规则与纠错记录</td></tr>
+<tr><td>提示词结构混乱，LLM 缓存命中率低，调用成本高</td><td><strong>提示缓存优化</strong>：规范提示布局，降低 token 消耗和延迟</td></tr>
+<tr><td>环境变量管理混乱，容易泄露密钥</td><td><strong>环境变量规范</strong>：统一 <code>.env.example</code> 维护，自动检查缺失和可疑凭证</td></tr>
+<tr><td>长任务中断后无法恢复，缺乏流程管控</td><td><strong>可恢复 Workflow</strong>：基于状态机的阶段管理，支持中断恢复</td></tr>
+<tr><td>技能散落各处，无法统一管理</td><td><strong>技能注册表</strong>：自动扫描和同步所有 SKILL.md 元数据</td></tr>
+<tr><td>提交代码前没有密钥安全检查</td><td><strong>密钥审计</strong>：扫描 Git 工作树中的 API Key、Token、密码和私钥</td></tr>
+<tr><td>多个 AI 助手之间配置不同步，手动维护易出错</td><td><strong>多 Agent 同步</strong>：以一个 canonical profile 为源，自动同步到其他 Agent</td></tr>
+<tr><td>缺乏资产版本和权限的可验证合同</td><td><strong>Manifest Platform</strong>：为 workflow、skill、hook 建立可验证的注册表与权限合同</td></tr>
+</tbody></table>
+<h3 id="设计理念">设计理念</h3>
+<ul><li><strong>模板源而非应用</strong>：克隆后安装到目标项目，不改动目标项目已有结构</li><li><strong>安全优先</strong>：所有操作默认 dry-run 预览，确认后才执行</li><li><strong>幂等可重复</strong>：安装器可安全重复执行，不会覆盖已有定制内容</li><li><strong>分级支持</strong>：Codex、Claude Code、CodeBuddy 为 Tier 1；其余 profile 为 contract-tested Tier 2</li><li><strong>可追溯更新</strong>：通过 <code>install-state.json</code> 记录已安装的 profile、组件和文件指纹，安全更新时能区分模板变更与项目定制内容</li></ul>
+<hr>
+<h2 id="2-核心功能">2. 核心功能</h2>
 <p>本产品包含 <strong>8 大功能模块</strong>，可单独安装，也可组合使用：</p>
+<h3 id="2-1-自学习系统-self-learning">2.1 自学习系统（Self-Learning）</h3>
+<p>让 AI 编程助手在每次会话开始时自动加载历史经验。</p>
+<ul><li><strong><code>digest</code> 技能</strong>：记录本次任务中真实发生的学习点和错误</li><li><strong><code>maintain-learnings</code> 技能</strong>：当经验库变长或错误反复出现时，先修源头（skill/模板/hook/规则），再归档已解决记录</li><li><strong>自动加载 Hook</strong>：会话启动时自动读取 <code>.learnings/RULES.md</code>、<code>ERRORS.md</code> 和最近的 <code>LEARNINGS.md</code></li><li><code>maintain-learnings</code> 只维护经验库，不承担 profile 同步职责</li></ul>
+<h3 id="2-2-提示缓存优化-prompt-cache-optimizer">2.2 提示缓存优化（Prompt Cache Optimizer）</h3>
+<p>审计并优化 LLM 提示缓存命中率、输入 token、延迟与调用成本。</p>
+<ul><li>安装提示缓存规则和入口文件引用</li><li>审计高频请求：检查稳定前缀、动态字段位置、不必要的全文件加载</li><li>可选可观测性：安装调用事件 schema（<code>/.llm/prompt-cache/</code>）和回归样本模板</li><li>提供设计原理、反例、指标与落地检查清单</li></ul>
+<h3 id="2-3-环境变量规范-env-template">2.3 环境变量规范（Env Template）</h3>
+<p>统一 <code>.env.example</code> 的创建、更新和审计方式。</p>
+<ul><li>安装规则文件和检查脚本到目标项目</li><li><strong>默认模式</strong>：阻止缺失变量和可疑凭证</li><li><strong>严格模式</strong>（<code>--strict</code>）：未被代码引用的模板变量也视为失败</li><li>保障环境变量模板最小化、项目专属、无真实密钥</li></ul>
+<h3 id="2-4-可恢复-workflow-workflow-todo-state">2.4 可恢复 Workflow（Workflow Todo State）</h3>
+<p>为长任务提供基于状态机的可恢复工作流管理。</p>
+<ul><li>创建可复用的命名工作流定义（<code>workflow.md</code> + <code>routing.yaml</code>）</li><li>生成人类可读的 Markdown 清单 + 机器可读的 YAML 前置元数据</li><li>通过 <code>todo-state.sh</code> 脚本确定性更新阶段状态</li><li>支持阶段流转：<code>未开始 → 进行中 → 已完成 / 跳过 / 阻塞</code></li><li>中断后可检查 YAML 前置元数据和当前阶段，安全恢复</li><li>最终阶段只有在 <code>quality_gate: passed</code> 后才能完成；临时豁免必须记录 owner 和 due date</li></ul>
+<h3 id="2-5-技能注册表同步-skill-registry">2.5 技能注册表同步（Skill Registry）</h3>
+<p>自动扫描和同步所有 SKILL.md 元数据到注册表。</p>
+<ul><li>扫描 <code>*/SKILL.md</code> 的 YAML frontmatter（name, description, category）</li><li>自动更新 <code>skill-invocation.md</code> 中的技能表格</li><li>智能比较：新增、更新、删除、保留——四类操作精确处理</li><li>只管理受管区域，不影响手工维护的内容</li></ul>
+<h3 id="2-6-密钥安全审计-security-secret-audit">2.6 密钥安全审计（Security Secret Audit）</h3>
+<p>在提交前扫描 Git 工作树中的暴露凭证。</p>
+<ul><li>三种扫描范围：当前文件 / staged 内容 / Git 全历史</li><li>检测项：API Key、Token、密码、私钥、JWT 等</li><li><strong>安全输出</strong>：报告只包含文件、行号和规则名，绝不输出凭证原文</li><li>退出码语义明确：<code>0</code> 通过、<code>2</code> 发现凭证、<code>1</code> 扫描器错误</li></ul>
+<h3 id="2-7-多-agent-同步-multi-agent-sync">2.7 多 Agent 同步（Multi-Agent Sync）</h3>
+<p>跨 profile 共享配置的唯一同步器。</p>
+<ul><li>以一个 canonical profile 为源，同步 skills、rules、hooks、scripts、workflows 和 MCP 配置</li><li>支持 6 种同步范围：<code>skills</code>、<code>rules</code>、<code>hooks</code>、<code>scripts</code>、<code>workflows</code>、<code>mcp</code></li><li>先用 <code>--check</code> 审阅漂移，再只对受影响 scope 使用 <code>--apply</code></li><li><code>bootstrap.py</code> 根据当前主机 Python 解释器生成本机 hook 配置（<code>hooks.json</code> / <code>settings.json</code>），这些文件被 gitignored</li><li><code>validate_portability.py</code> 验证交付目标平台的可移植性</li><li>路径安全：所有 profile 路径必须是非空、项目相对的 POSIX 路径，拒绝绝对路径、<code>..</code> 和反斜杠</li></ul>
+<h3 id="2-8-agent-manifest-platform">2.8 Agent Manifest Platform</h3>
+<p>为 workflow、skill、hook 和 subagent 建立可验证的注册表与权限合同。</p>
+<ul><li>通过 <code>manifest-registry.py validate</code> 发现缺失 manifest、无效入口或不允许的权限</li><li>声明最窄的真实权限（manifest 请求权限，由 host 运行时强制执行）</li><li>支持依赖 ID 引用，但仅在被引用的 manifest 存在后才可添加</li><li><code>manifest-registry.py init</code> 可创建初始 manifest 供后续细化</li></ul>
+<hr>
+<h2 id="3-支持的-ai-编程助手">3. 支持的 AI 编程助手</h2>
+<p>本产品内置 <strong>12 种</strong> Agent Profile。Tier 1（Codex、Claude Code、CodeBuddy）执行跨系统安装与升级验证；其余 profile 属于 Tier 2，执行布局合同与 smoke test：</p>
+<table><thead><tr><th>Profile</th><th>Skills 目录</th><th>Rules 目录</th><th>Hooks</th><th>入口文件</th></tr></thead><tbody>
+<tr><td><code>codex</code></td><td><code>.agents/skills</code></td><td><code>.codex/rules</code></td><td><code>.codex/hooks</code></td><td><code>AGENTS.md</code></td></tr>
+<tr><td><code>claude</code></td><td><code>.claude/skills</code></td><td><code>.claude/rules</code></td><td><code>.claude/hooks</code></td><td><code>CLAUDE.md</code></td></tr>
+<tr><td><code>codebuddy</code></td><td><code>.codebuddy/skills</code></td><td><code>.codebuddy/rules</code></td><td><code>.codebuddy/hooks</code></td><td><code>CODEBUDDY.md</code></td></tr>
+<tr><td><code>cursor</code></td><td><code>.cursor/skills</code></td><td><code>.cursor/rules</code></td><td>—</td><td><code>AGENTS.md</code></td></tr>
+<tr><td><code>gemini</code></td><td><code>.gemini/skills</code></td><td><code>.gemini/rules</code></td><td>—</td><td><code>GEMINI.md</code></td></tr>
+<tr><td><code>github-copilot</code></td><td><code>.github/skills</code></td><td><code>.github/instructions</code></td><td>—</td><td><code>.github/copilot-instructions.md</code></td></tr>
+<tr><td><code>cline</code></td><td><code>.cline/skills</code></td><td><code>.clinerules</code></td><td>—</td><td><code>AGENTS.md</code></td></tr>
+<tr><td><code>roo-code</code></td><td><code>.roo/skills</code></td><td><code>.roo/rules</code></td><td>—</td><td><code>AGENTS.md</code></td></tr>
+<tr><td><code>windsurf</code></td><td><code>.windsurf/skills</code></td><td><code>.windsurf/rules</code></td><td>—</td><td><code>AGENTS.md</code></td></tr>
+<tr><td><code>opencode</code></td><td><code>.opencode/skills</code></td><td><code>.opencode/rules</code></td><td>—</td><td><code>AGENTS.md</code></td></tr>
+<tr><td><code>qwen-code</code></td><td><code>.qwen/skills</code></td><td><code>.qwen/rules</code></td><td>—</td><td><code>QWEN.md</code></td></tr>
+<tr><td><code>generic</code></td><td><code>.agent/skills</code></td><td><code>.agent/rules</code></td><td><code>.agent/hooks</code></td><td><code>AGENTS.md</code></td></tr>
+</tbody></table>
+<p>未在列表中的 Agent 可使用 <code>generic</code> profile，或按 <a href="#8-自定义-agent-接入">第 8 节</a> 创建自定义 Profile。</p>
+<p>自动检测器会忽略仅有 <code>AGENTS.md</code> 文件的项目，因为该文件名是通用入口，不足以判断具体运行时。</p>
+<hr>
+<h2 id="4-运行环境要求">4. 运行环境要求</h2>
+<table><thead><tr><th>工具</th><th>用途</th><th>要求</th></tr></thead><tbody>
+<tr><td><strong>Git</strong></td><td>克隆模板、密钥审计</td><td>建议安装</td></tr>
+<tr><td><strong>Python 3.10+</strong></td><td>安装器、hooks、注册表</td><td>必需</td></tr>
+<tr><td><strong>Bash</strong></td><td>Shell 安装器和检查脚本</td><td>Linux、macOS、WSL 或 Git Bash</td></tr>
+<tr><td><strong>ripgrep (<code>rg</code>)</strong></td><td>严格 env 检查</td><td>使用 env 检查时必需</td></tr>
+<tr><td><strong>Perl</strong></td><td>workflow 状态和密钥检测</td><td>使用对应组件时必需</td></tr>
+</tbody></table>
+<blockquote><p><strong>Windows 用户</strong>：Python 脚本可直接运行（使用 <code>py -3</code> 或 <code>python</code>）。Bash 脚本需要安装 Git for Windows（提供 Git Bash）或使用 WSL。统一安装器会自动查找系统 Bash 和常见 Git Bash 安装路径；找不到时不会写入目标项目，并明确提示安装 Git for Windows 或使用 WSL。</p></blockquote>
+<hr>
+<h2 id="5-快速开始">5. 快速开始</h2>
+<h3 id="第一步-获取模板">第一步：获取模板</h3>
+<pre><code class="language-bash">git clone https://github.com/Treasoni/Agent-Template-Kits.git
+cd Agent-Template-Kits
 
-<div class="card-grid">
-  <div class="card" id="sec-2-1">
-    <div class="icon">🧠</div>
-    <h4>2.1 自学习系统</h4>
-    <p>每次会话自动加载历史经验。<code>digest</code> 记录学习点和错误，<code>maintain-learnings</code> 先修源头再归档。SessionStart hook 自动读取 <code>.learnings/</code>。</p>
-  </div>
-  <div class="card" id="sec-2-2">
-    <div class="icon">⚡</div>
-    <h4>2.2 提示缓存优化</h4>
-    <p>审计并优化 LLM 缓存命中率、token、延迟与成本。安装规则和入口引用，可选可观测性 schema 和回归样本。</p>
-  </div>
-  <div class="card" id="sec-2-3">
-    <div class="icon">🔐</div>
-    <h4>2.3 环境变量规范</h4>
-    <p>统一 <code>.env.example</code> 维护方式。默认模式检查缺失变量和可疑凭证，严格模式 (<code>--strict</code>) 检查未引用变量。</p>
-  </div>
-  <div class="card" id="sec-2-4">
-    <div class="icon">📋</div>
-    <h4>2.4 可恢复 Workflow</h4>
-    <p>基于状态机的阶段管理。<code>workflow.md</code> + <code>routing.yaml</code> + <code>todo-state.sh</code>，支持中断恢复和阶段流转。</p>
-  </div>
-  <div class="card" id="sec-2-5">
-    <div class="icon">📦</div>
-    <h4>2.5 技能注册表</h4>
-    <p>自动扫描 SKILL.md frontmatter，智能比较新增/更新/删除/保留，只管理受管区域。</p>
-  </div>
-  <div class="card" id="sec-2-6">
-    <div class="icon">🔍</div>
-    <h4>2.6 密钥安全审计</h4>
-    <p>三种扫描范围：当前文件 / staged / Git 全历史。检测 API Key、Token、密码、私钥。报告不输出凭证原文。</p>
-  </div>
-  <div class="card" id="sec-2-7">
-    <div class="icon">🔄</div>
-    <h4>2.7 多 Agent 同步</h4>
-    <p>跨 profile 同步 skills/rules/hooks/scripts/workflows/MCP。<code>bootstrap.py</code> 生成本机 hook 配置，<code>validate_portability.py</code> 验证跨平台可移植性。</p>
-  </div>
-  <div class="card" id="sec-2-8">
-    <div class="icon">📜</div>
-    <h4>2.8 Manifest Platform</h4>
-    <p>为 workflow、skill、hook 建立可验证的版本、能力和权限合同。<code>manifest-registry.py validate</code> 发现缺失和不合规项。</p>
-  </div>
-</div>
-</section>
+# 生成本机 Codex / Claude runtime；公共 canonical core 不依赖网络
+python3 scripts/sync-runtime-skills.py --apply
 
-<!-- 3. 支持的 AI 编程助手 -->
-<section id="sec-3">
-<h2>3. 支持的 AI 编程助手</h2>
-<p>本产品内置 <strong>12 种</strong> Agent Profile，覆盖主流 AI 编程助手：</p>
-<table>
-  <tr><th>Profile</th><th>Skills 目录</th><th>Rules 目录</th><th>Hooks</th><th>入口文件</th></tr>
-  <tr><td><code>codex</code></td><td><code>.agents/skills</code></td><td><code>.codex/rules</code></td><td><code>.codex/hooks</code></td><td><code>AGENTS.md</code></td></tr>
-  <tr><td><code>claude</code></td><td><code>.claude/skills</code></td><td><code>.claude/rules</code></td><td><code>.claude/hooks</code></td><td><code>CLAUDE.md</code></td></tr>
-  <tr><td><code>codebuddy</code></td><td><code>.codebuddy/skills</code></td><td><code>.codebuddy/rules</code></td><td><code>.codebuddy/hooks</code></td><td><code>CODEBUDDY.md</code></td></tr>
-  <tr><td><code>cursor</code></td><td><code>.cursor/skills</code></td><td><code>.cursor/rules</code></td><td>—</td><td><code>AGENTS.md</code></td></tr>
-  <tr><td><code>gemini</code></td><td><code>.gemini/skills</code></td><td><code>.gemini/rules</code></td><td>—</td><td><code>GEMINI.md</code></td></tr>
-  <tr><td><code>github-copilot</code></td><td><code>.github/skills</code></td><td><code>.github/instructions</code></td><td>—</td><td><code>.github/copilot-instructions.md</code></td></tr>
-  <tr><td><code>cline</code></td><td><code>.cline/skills</code></td><td><code>.clinerules</code></td><td>—</td><td><code>AGENTS.md</code></td></tr>
-  <tr><td><code>roo-code</code></td><td><code>.roo/skills</code></td><td><code>.roo/rules</code></td><td>—</td><td><code>AGENTS.md</code></td></tr>
-  <tr><td><code>windsurf</code></td><td><code>.windsurf/skills</code></td><td><code>.windsurf/rules</code></td><td>—</td><td><code>AGENTS.md</code></td></tr>
-  <tr><td><code>opencode</code></td><td><code>.opencode/skills</code></td><td><code>.opencode/rules</code></td><td>—</td><td><code>AGENTS.md</code></td></tr>
-  <tr><td><code>qwen-code</code></td><td><code>.qwen/skills</code></td><td><code>.qwen/rules</code></td><td>—</td><td><code>QWEN.md</code></td></tr>
-  <tr><td><code>generic</code></td><td><code>.agent/skills</code></td><td><code>.agent/rules</code></td><td><code>.agent/hooks</code></td><td><code>AGENTS.md</code></td></tr>
-</table>
-<p>未在列表中的 Agent 可使用 <code>generic</code> profile，或按 <a href="#sec-8">第 8 节</a> 创建自定义 Profile。自动检测器会忽略仅有 <code>AGENTS.md</code> 文件的项目，因为该文件名是通用入口，不足以判断具体运行时。</p>
-</section>
-
-<!-- 4. 运行环境要求 -->
-<section id="sec-4">
-<h2>4. 运行环境要求</h2>
-<table>
-  <tr><th>工具</th><th>用途</th><th>要求</th></tr>
-  <tr><td><strong>Git</strong></td><td>克隆模板、密钥审计</td><td>建议安装</td></tr>
-  <tr><td><strong>Python 3</strong></td><td>安装器、hooks、注册表</td><td>必需</td></tr>
-  <tr><td><strong>Bash</strong></td><td>Shell 安装器和检查脚本</td><td>Linux、macOS、WSL 或 Git Bash</td></tr>
-  <tr><td><strong>ripgrep (<code>rg</code>)</strong></td><td>严格 env 检查</td><td>使用 env 检查时必需</td></tr>
-  <tr><td><strong>Perl</strong></td><td>workflow 状态和密钥检测</td><td>使用对应组件时必需</td></tr>
-</table>
-<blockquote><p><strong>Windows 用户</strong>：Python 脚本可直接运行（使用 <code>py -3</code> 或 <code>python</code>）。Bash 脚本需要安装 Git for Windows（提供 Git Bash）或使用 WSL。统一安装器会自动查找系统 Bash 和常见 Git Bash 安装路径；找不到时不会写入目标项目，并明确提示。</p></blockquote>
-</section>
-
-<!-- 5. 快速开始 -->
-<section id="sec-5">
-<h2>5. 快速开始</h2>
-<div class="steps">
-  <div class="step">
-    <div class="num">1</div>
-    <h4>获取模板</h4>
-    <p>克隆仓库并进入目录</p>
-  </div>
-  <div class="step">
-    <div class="num">2</div>
-    <h4>指定目标项目</h4>
-    <p>设置 <code>$TARGET</code> 环境变量，目录必须已存在</p>
-  </div>
-  <div class="step">
-    <div class="num">3</div>
-    <h4>自动检测安装</h4>
-    <p>检测 → 预览 → 应用，三步完成</p>
-  </div>
-</div>
-
-<h4>第一步：获取模板</h4>
-<pre><span class="tok-keyword">git</span> clone https://github.com/Treasoni/Agent-Template-Kits.git
-<span class="tok-keyword">cd</span> Agent-Template-Kits</pre>
-
-<h4>第二步：指定目标项目</h4>
-<pre><span class="tok-comment"># 你的目标项目目录（必须已存在）</span>
-<span class="tok-keyword">export</span> TARGET=/absolute/path/to/your-project
-<span class="tok-keyword">test</span> -d <span class="tok-string">"$TARGET"</span></pre>
-
+# 可选：按 commit + 内容哈希安装 skills-lock.json 中的第三方开发 skills
+python3 scripts/sync-runtime-skills.py --apply --with-external</code></pre>
+<h3 id="第二步-指定目标项目">第二步：指定目标项目</h3>
+<pre><code class="language-bash"># 你的目标项目目录（必须已存在）
+export TARGET=/absolute/path/to/your-project
+test -d &quot;$TARGET&quot;</code></pre>
 <blockquote><p><strong>Windows 用户</strong>：以下命令中将 <code>python3</code> 替换为 <code>python</code>。脚本同时接受 <code>python3</code> 或 <code>python</code>，生成的 hooks 在 Windows 上使用 <code>python.exe</code>。</p></blockquote>
+<h3 id="第三步-自动检测并安装-推荐">第三步：自动检测并安装（推荐）</h3>
+<pre><code class="language-bash"># 1. 只检测，不修改目标项目——查看自动识别结果
+python3 scripts/install.py --target &quot;$TARGET&quot; --detect
 
-<h4>第三步：自动检测并安装（推荐）</h4>
-<pre><span class="tok-comment"># 1. 只检测，不修改目标项目</span>
-<span class="tok-keyword">python3</span> scripts/install.py <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--detect</span>
+# 2. 预览安装计划（仍不写入）
+python3 scripts/install.py --target &quot;$TARGET&quot; --use-detected
 
-<span class="tok-comment"># 2. 预览安装计划（仍不写入）</span>
-<span class="tok-keyword">python3</span> scripts/install.py <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--use-detected</span>
-
-<span class="tok-comment"># 3. 确认后执行安装</span>
-<span class="tok-keyword">python3</span> scripts/install.py \
-  <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span> \
-  <span class="tok-flag">--use-detected</span> \
-  <span class="tok-flag">--components</span> self-learning,env,registry \
-  <span class="tok-flag">--apply</span> <span class="tok-flag">--yes</span></pre>
+# 3. 确认后执行安装（仅安装需要的能力）
+python3 scripts/install.py \
+  --target &quot;$TARGET&quot; \
+  --use-detected \
+  --components self-learning,env,registry \
+  --apply --yes</code></pre>
 <p>安装完成后，建议检查目标项目的 <code>git diff</code>，确认变更内容后再提交。</p>
-</section>
+<hr>
+<h2 id="6-统一安装器详解">6. 统一安装器详解</h2>
+<p>统一安装器（<code>scripts/install.py</code>）是跨平台的协调入口，提供以下能力：</p>
+<h3 id="6-1-可选组件">6.1 可选组件</h3>
+<table><thead><tr><th>组件名称</th><th>说明</th></tr></thead><tbody>
+<tr><td><code>self-learning</code></td><td>自学习系统（skills + hooks + 学习记录）</td></tr>
+<tr><td><code>env</code></td><td>环境变量规则和检查脚本</td></tr>
+<tr><td><code>prompt-cache</code></td><td>提示缓存 skill 和规则</td></tr>
+<tr><td><code>workflow</code></td><td>可恢复 workflow、routing 规则和状态脚本</td></tr>
+<tr><td><code>registry</code></td><td>技能注册表</td></tr>
+<tr><td><code>manifest-platform</code></td><td>Agent 资产 manifest registry（显式选择）</td></tr>
+<tr><td><code>multi-agent-sync</code></td><td>跨 profile 同步 runtime（显式选择）</td></tr>
+</tbody></table>
+<p>默认安装前五项核心组件；后两项会额外写入 registry 或 <code>.agent-sync/</code> runtime，须显式选择。可通过 <code>--components</code> 按需组合：</p>
+<pre><code class="language-bash">python3 scripts/install.py \
+  --target &quot;$TARGET&quot; \
+  --use-detected \
+  --components self-learning,env,registry \
+  --apply --yes</code></pre>
+<p>统一安装器会把 <code>prompt-cache-optimizer</code>、<code>workflow-todo-state</code>、<code>sync-skill-registry</code> 和按需选择的 <code>manifest-platform</code> 复制到所选 profile 的 skills 目录。<code>prompt-cache</code>、<code>workflow</code> 与 <code>manifest-platform</code> 使用 Bash：Linux/macOS 可直接运行；Windows 下安装器会寻找 Git Bash，找不到时会明确提示。</p>
+<h3 id="6-2-安装器行为">6.2 安装器行为</h3>
+<ul><li><strong>默认 dry-run</strong>：先预览将执行的命令，不修改目标项目</li><li><strong>自动检测</strong>：根据目标项目已有的 agent 目录、配置和入口文件推荐 Profile，并显示检测证据</li><li><strong>手动选择</strong>：<code>--profile &lt;name&gt;</code> 指定单个 Profile</li><li><strong>多 Profile 支持</strong>：可重复使用 <code>--profile</code> 安装到多个 Agent</li><li><strong>确认机制</strong>：<code>--apply</code> 时要求确认；非交互环境需显式 <code>--yes</code></li><li><strong>完整 Skill 复制</strong>：<code>prompt-cache-optimizer</code>、<code>workflow-todo-state</code>、<code>sync-skill-registry</code> 和按需选择的 <code>manifest-platform</code> 会一并复制到目标项目</li><li><strong><code>--overwrite</code>、<code>--force-workflow</code> 和 <code>--force-manifest-platform</code></strong> 都需要显式给出，避免覆盖已有定制内容</li></ul>
+<h3 id="6-3-关键参数">6.3 关键参数</h3>
+<table><thead><tr><th>参数</th><th>说明</th></tr></thead><tbody>
+<tr><td><code>--target &lt;path&gt;</code></td><td>目标项目路径（必须已存在）</td></tr>
+<tr><td><code>--detect</code></td><td>只检测，不修改</td></tr>
+<tr><td><code>--use-detected</code></td><td>采用所有检测到的 Profile</td></tr>
+<tr><td><code>--profile &lt;name&gt;</code></td><td>手动指定 Profile</td></tr>
+<tr><td><code>--components &lt;list&gt;</code></td><td>按需选择组件</td></tr>
+<tr><td><code>--apply</code></td><td>执行安装（否则只预览）</td></tr>
+<tr><td><code>--yes</code></td><td>非交互环境跳过确认</td></tr>
+<tr><td><code>--overwrite</code></td><td>覆盖已有受管内容（需显式给出）</td></tr>
+<tr><td><code>--force-workflow</code></td><td>强制覆盖不同的 workflow 文件（需显式给出）</td></tr>
+<tr><td><code>--force-manifest-platform</code></td><td>强制覆盖不同的 manifest registry 或 skill（需显式给出）</td></tr>
+</tbody></table>
+<hr>
+<h2 id="7-各功能模块详解">7. 各功能模块详解</h2>
+<h3 id="7-1-安装自学习系统">7.1 安装自学习系统</h3>
+<pre><code class="language-bash">python3 templates/self-learning/install.py --target &quot;$TARGET&quot; --profile codex</code></pre>
+<p><strong>安装内容：</strong></p>
+<ul><li><code>digest</code> 和 <code>maintain-learnings</code> skills</li><li><code>.learnings/RULES.md</code>、<code>ERRORS.md</code>、<code>LEARNINGS.md</code></li><li>会话开始读取经验库的 hook 脚本</li><li>对应 Agent 的 hook 配置（保留既有无关 hooks）</li></ul>
+<p>如不需要 hooks：</p>
+<pre><code class="language-bash">python3 templates/self-learning/install.py --target &quot;$TARGET&quot; --profile codex --no-hooks</code></pre>
+<h3 id="7-2-安装提示缓存优化">7.2 安装提示缓存优化</h3>
+<p><strong>完整版（推荐）</strong>——安装 skill 和规则：</p>
+<pre><code class="language-bash">bash skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh \
+  --apply --platform codex --with-skill --target &quot;$TARGET&quot;</code></pre>
+<p><strong>精简版</strong>——只安装规则和入口文件引用：</p>
+<pre><code class="language-bash">bash templates/cache/prompt-cache-bootstrap.sh \
+  --apply --platform codex --target &quot;$TARGET&quot;</code></pre>
+<p><strong>审计现有配置</strong>（只读检查）：</p>
+<pre><code class="language-bash">bash templates/cache/prompt-cache-bootstrap.sh \
+  --check --platform codex --target &quot;$TARGET&quot;</code></pre>
+<blockquote><p>可观测性（<code>--with-observability</code>）：仅当 Agent 已接通自动 LLM usage 采集时使用。它会安装 <code>/.llm/prompt-cache/</code> 的 schema 和回归样本。直接使用 Codex 时不要加此选项，也无需手填 token 或费用。</p></blockquote>
+<h3 id="7-3-安装环境变量规范">7.3 安装环境变量规范</h3>
+<pre><code class="language-bash">python3 templates/env/install.py --target &quot;$TARGET&quot; --profile codex</code></pre>
+<p><strong>安装后检查：</strong></p>
+<pre><code class="language-bash">cd &quot;$TARGET&quot;
 
-<!-- 6. 统一安装器详解 -->
-<section id="sec-6">
-<h2>6. 统一安装器详解</h2>
-<p>统一安装器（<code>scripts/install.py</code>）是跨平台的协调入口。</p>
+# 默认模式：检查缺失变量和可疑凭证
+.codex/scripts/check-env-template.sh
 
-<h3>6.1 可选组件</h3>
-<table>
-  <tr><th>组件名称</th><th>说明</th></tr>
-  <tr><td><code>self-learning</code></td><td>自学习系统（skills + hooks + 学习记录）</td></tr>
-  <tr><td><code>env</code></td><td>环境变量规则和检查脚本</td></tr>
-  <tr><td><code>prompt-cache</code></td><td>提示缓存 skill 和规则</td></tr>
-  <tr><td><code>workflow</code></td><td>可恢复 workflow、routing 规则和状态脚本</td></tr>
-  <tr><td><code>registry</code></td><td>技能注册表</td></tr>
-  <tr><td><code>manifest-platform</code></td><td>Agent 资产 manifest registry（显式选择）</td></tr>
-  <tr><td><code>multi-agent-sync</code></td><td>跨 profile 同步 runtime（显式选择）</td></tr>
-</table>
-<p>默认安装前五项核心组件；后两项须显式选择。</p>
+# 严格模式：未被代码引用的模板变量也视为失败
+.codex/scripts/check-env-template.sh --strict</code></pre>
+<blockquote><p>检查脚本不会自动创建 <code>.env.example</code>，目标项目需先准备自己的最小环境变量模板。</p></blockquote>
+<p><strong>本仓库自身的 <code>.env.example</code> 变量说明：</strong></p>
+<table><thead><tr><th>变量</th><th>默认值</th><th>用途</th></tr></thead><tbody>
+<tr><td><code>PYTHON</code></td><td><code>python3</code></td><td>Python 解释器路径，Windows 下自动检测 <code>py -3</code> 或 <code>python.exe</code></td></tr>
+<tr><td><code>PROMPT_CACHE_ASSET_DIR</code></td><td>空（使用内置资源）</td><td>提示缓存观测 schema 与回归样本的自定义路径</td></tr>
+<tr><td><code>PROMPT_CACHE_PROFILE_ROOT</code></td><td>空</td><td>独立安装器副本使用的 profile-contract 位置</td></tr>
+<tr><td><code>WORKFLOW_PROFILE_ROOT</code></td><td>空</td><td>独立安装器副本使用的 workflow profile-contract 位置</td></tr>
+</tbody></table>
+<h3 id="7-4-安装可恢复-workflow">7.4 安装可恢复 Workflow</h3>
+<pre><code class="language-bash">bash skills/workflow-todo-state/scripts/install.sh \
+  &quot;$TARGET&quot; \
+  --profile codex \
+  --with-skill \
+  --init-layout \
+  --update-agents</code></pre>
+<p><strong>安装后使用流程：</strong></p>
+<ol><li>在 <code>.codex/workflows/&lt;workflow-id&gt;/</code> 创建 <code>workflow.md</code>、<code>state-template.md</code> 和 <code>routing.yaml</code></li><li>运行 <code>.codex/scripts/sync-workflow-routing.sh</code> 生成路由注册表</li><li>从 state template 创建 <code>workspace/workflow-runs/&lt;task&gt;.workflow.md</code></li><li>通过 <code>todo-state.sh</code> 更新阶段状态：</li></ol>
+<pre><code class="language-bash"># 开始阶段
+.codex/scripts/todo-state.sh &quot;${WORKFLOW_STATE_FILE}&quot; start P1
 
-<h3>6.2 关键参数</h3>
-<table>
-  <tr><th>参数</th><th>说明</th></tr>
-  <tr><td><code>--target &lt;path&gt;</code></td><td>目标项目路径（必须已存在）</td></tr>
-  <tr><td><code>--detect</code></td><td>只检测，不修改</td></tr>
-  <tr><td><code>--use-detected</code></td><td>采用所有检测到的 Profile</td></tr>
-  <tr><td><code>--profile &lt;name&gt;</code></td><td>手动指定 Profile</td></tr>
-  <tr><td><code>--components &lt;list&gt;</code></td><td>按需选择组件</td></tr>
-  <tr><td><code>--apply</code></td><td>执行安装（否则只预览）</td></tr>
-  <tr><td><code>--yes</code></td><td>非交互环境跳过确认</td></tr>
-  <tr><td><code>--overwrite</code></td><td>覆盖已有受管内容（需显式给出）</td></tr>
-  <tr><td><code>--force-workflow</code></td><td>强制覆盖不同的 workflow 文件</td></tr>
-  <tr><td><code>--force-manifest-platform</code></td><td>强制覆盖不同的 manifest registry 或 skill</td></tr>
-</table>
-</section>
+# 完成阶段
+.codex/scripts/todo-state.sh &quot;${WORKFLOW_STATE_FILE}&quot; complete P1
 
-<!-- 7. 各功能模块详解 -->
-<section id="sec-7">
-<h2>7. 各功能模块详解</h2>
+# 跳过阶段
+.codex/scripts/todo-state.sh &quot;${WORKFLOW_STATE_FILE}&quot; skip P2 &quot;not needed&quot;
 
-<h3>7.1 安装自学习系统</h3>
-<pre><span class="tok-keyword">python3</span> templates/self-learning/install.py <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--profile</span> codex</pre>
-<p>安装 <code>digest</code> 和 <code>maintain-learnings</code> skills、<code>.learnings/</code> 学习记录、SessionStart hook 脚本。如不需要 hooks，加 <code>--no-hooks</code>。</p>
+# 阻塞阶段
+.codex/scripts/todo-state.sh &quot;${WORKFLOW_STATE_FILE}&quot; block P3 &quot;waiting for user input&quot;</code></pre>
+<p><strong>阶段状态流转规则：</strong></p>
+<ul><li><code>start PN</code>：要求前序阶段全部为"已完成"或"跳过"</li><li><code>complete PN</code>：要求当前阶段为"进行中"</li><li><code>skip PN</code>：拒绝已完成阶段，记录跳过原因</li><li><code>block PN</code>：标记为阻塞，记录原因</li><li>完成或跳过后，自动推进到下一个"未开始"阶段</li></ul>
+<h3 id="7-5-安装技能注册表">7.5 安装技能注册表</h3>
+<pre><code class="language-bash"># 预览（不写文件）
+python3 skills/sync-skill-registry/scripts/sync_skill_registry.py \
+  --profile codex --root &quot;$TARGET&quot; --create --with-skill --dry-run
 
-<h3>7.2 安装提示缓存优化</h3>
-<pre><span class="tok-comment"># 完整版（推荐）——安装 skill 和规则</span>
-<span class="tok-keyword">bash</span> skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh \
-  <span class="tok-flag">--apply</span> <span class="tok-flag">--platform</span> codex <span class="tok-flag">--with-skill</span> <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span>
+# 应用
+python3 skills/sync-skill-registry/scripts/sync_skill_registry.py \
+  --profile codex --root &quot;$TARGET&quot; --create --with-skill</code></pre>
+<p><strong>工作原理：</strong></p>
+<ol><li>扫描 <code>&lt;skills-dir&gt;/*/SKILL.md</code>，解析 frontmatter</li><li>读取当前 <code>skill-invocation.md</code>，提取现有表格</li><li>比较：新增、更新、删除（受管条目）、保留（手工条目）</li><li>按分类重新生成 Markdown 表格并写入</li></ol>
+<h3 id="7-6-密钥安全审计">7.6 密钥安全审计</h3>
+<p>从目标项目调用本仓库的审计脚本：</p>
+<pre><code class="language-bash">AUDITOR=&quot;$PWD/skills/security-secret-audit/scripts/audit-secrets.sh&quot;
 
-<span class="tok-comment"># 精简版——只安装规则和入口文件引用</span>
-<span class="tok-keyword">bash</span> templates/cache/prompt-cache-bootstrap.sh \
-  <span class="tok-flag">--apply</span> <span class="tok-flag">--platform</span> codex <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span>
+# 扫描当前已跟踪和未忽略文件
+(cd &quot;$TARGET&quot; &amp;&amp; &quot;$AUDITOR&quot;)
 
-<span class="tok-comment"># 审计现有配置（只读检查）</span>
-<span class="tok-keyword">bash</span> templates/cache/prompt-cache-bootstrap.sh \
-  <span class="tok-flag">--check</span> <span class="tok-flag">--platform</span> codex <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span></pre>
-<blockquote><p>可观测性（<code>--with-observability</code>）：仅当 Agent 已接通自动 LLM usage 采集时使用。</p></blockquote>
+# 提交前只扫描 staged 内容
+(cd &quot;$TARGET&quot; &amp;&amp; &quot;$AUDITOR&quot; --staged)
 
-<h3>7.3 安装环境变量规范</h3>
-<pre><span class="tok-keyword">python3</span> templates/env/install.py <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--profile</span> codex
+# 泄露排查：包含 Git 历史
+(cd &quot;$TARGET&quot; &amp;&amp; &quot;$AUDITOR&quot; --all)
 
-<span class="tok-comment"># 安装后检查</span>
-<span class="tok-keyword">cd</span> <span class="tok-string">"$TARGET"</span>
-.codex/scripts/check-env-template.sh            <span class="tok-comment"># 默认模式</span>
-.codex/scripts/check-env-template.sh <span class="tok-flag">--strict</span>     <span class="tok-comment"># 严格模式</span></pre>
+# 项目安全审查：凭证泄漏 + 高置信度源码、配置和敏感文件风险
+(cd &quot;$TARGET&quot; &amp;&amp; &quot;$AUDITOR&quot; --project)
 
-<h4>本仓库 <code>.env.example</code> 变量说明</h4>
-<table>
-  <tr><th>变量</th><th>默认值</th><th>用途</th></tr>
-  <tr><td><code>PYTHON</code></td><td><code>python3</code></td><td>Python 解释器路径，Windows 下自动检测</td></tr>
-  <tr><td><code>PROMPT_CACHE_ASSET_DIR</code></td><td>空</td><td>提示缓存观测 schema 自定义路径</td></tr>
-  <tr><td><code>PROMPT_CACHE_PROFILE_ROOT</code></td><td>空</td><td>独立安装器副本的 profile-contract 位置</td></tr>
-  <tr><td><code>WORKFLOW_PROFILE_ROOT</code></td><td>空</td><td>独立安装器副本的 workflow profile-contract 位置</td></tr>
-</table>
+# CI 阻断模式；--strict 与 --fix 必须搭配 --project
+(cd &quot;$TARGET&quot; &amp;&amp; &quot;$AUDITOR&quot; --project --strict)
 
-<h3>7.4 安装可恢复 Workflow</h3>
-<pre><span class="tok-keyword">bash</span> skills/workflow-todo-state/scripts/install.sh \
-  <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--profile</span> codex <span class="tok-flag">--with-skill</span> <span class="tok-flag">--init-layout</span> <span class="tok-flag">--update-agents</span></pre>
-<p><strong>阶段状态流转：</strong></p>
-<pre><span class="tok-comment"># 开始 / 完成 / 跳过 / 阻塞</span>
-.codex/scripts/todo-state.sh <span class="tok-string">"${WF_STATE}"</span> start P1
-.codex/scripts/todo-state.sh <span class="tok-string">"${WF_STATE}"</span> complete P1
-.codex/scripts/todo-state.sh <span class="tok-string">"${WF_STATE}"</span> skip P2 <span class="tok-string">"not needed"</span>
-.codex/scripts/todo-state.sh <span class="tok-string">"${WF_STATE}"</span> block P3 <span class="tok-string">"waiting for input"</span></pre>
-
-<h3>7.5 安装技能注册表</h3>
-<pre><span class="tok-comment"># 预览（不写文件）</span>
-<span class="tok-keyword">python3</span> skills/sync-skill-registry/scripts/sync_skill_registry.py \
-  <span class="tok-flag">--profile</span> codex <span class="tok-flag">--root</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--create</span> <span class="tok-flag">--with-skill</span> <span class="tok-flag">--dry-run</span>
-
-<span class="tok-comment"># 应用</span>
-<span class="tok-keyword">python3</span> skills/sync-skill-registry/scripts/sync_skill_registry.py \
-  <span class="tok-flag">--profile</span> codex <span class="tok-flag">--root</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--create</span> <span class="tok-flag">--with-skill</span></pre>
-
-<h3>7.6 密钥安全审计</h3>
-<pre>AUDITOR=<span class="tok-string">"$PWD/skills/security-secret-audit/scripts/audit-secrets.sh"</span>
-
-<span class="tok-comment"># 当前文件 / staged / Git 全历史</span>
-(<span class="tok-keyword">cd</span> <span class="tok-string">"$TARGET"</span> && <span class="tok-string">"$AUDITOR"</span>)
-(<span class="tok-keyword">cd</span> <span class="tok-string">"$TARGET"</span> && <span class="tok-string">"$AUDITOR"</span> <span class="tok-flag">--staged</span>)
-(<span class="tok-keyword">cd</span> <span class="tok-string">"$TARGET"</span> && <span class="tok-string">"$AUDITOR"</span> <span class="tok-flag">--all</span>)
-
-<span class="tok-comment"># 项目风险 / CI 严格模式 / 低风险修复</span>
-(<span class="tok-keyword">cd</span> <span class="tok-string">"$TARGET"</span> && <span class="tok-string">"$AUDITOR"</span> <span class="tok-flag">--project</span>)
-(<span class="tok-keyword">cd</span> <span class="tok-string">"$TARGET"</span> && <span class="tok-string">"$AUDITOR"</span> <span class="tok-flag">--project --strict</span>)
-(<span class="tok-keyword">cd</span> <span class="tok-string">"$TARGET"</span> && <span class="tok-string">"$AUDITOR"</span> <span class="tok-flag">--project --fix</span>)</pre>
-<table>
-  <tr><th>退出码</th><th>含义</th></tr>
-  <tr><td><code>0</code></td><td>无凭证发现；非严格项目风险作为待处理告警</td></tr>
-  <tr><td><code>2</code></td><td>发现潜在凭证，或严格模式下发现项目风险，应阻止提交</td></tr>
-  <tr><td><code>1</code></td><td>扫描器错误，需排查</td></tr>
-</table>
+# 先预览，再仅补充受管的本地凭证忽略规则
+(cd &quot;$TARGET&quot; &amp;&amp; &quot;$AUDITOR&quot; --project --fix)</code></pre>
+<p><strong>退出码：</strong></p>
+<table><thead><tr><th>退出码</th><th>含义</th></tr></thead><tbody>
+<tr><td><code>0</code></td><td>无凭证发现；非严格项目风险作为待处理告警</td></tr>
+<tr><td><code>2</code></td><td>发现潜在凭证，或 <code>--strict</code> 下发现项目风险，应阻止提交</td></tr>
+<tr><td><code>1</code></td><td>扫描器错误，需排查</td></tr>
+</tbody></table>
 <p>项目审查覆盖禁用 TLS 校验、shell 命令执行、宽松 CORS、全局可写权限、敏感数据日志、被追踪的凭证文件和缺少本地凭证忽略规则。报告只显示位置和规则名。<code>--fix</code> 仅添加幂等 <code>.gitignore</code> 块，不会删除凭证、轮换密钥、改写历史、暂存、提交或推送。</p>
+<h3 id="7-7-多-agent-同步">7.7 多 Agent 同步</h3>
+<p><code>multi-agent-sync</code> 是跨 profile 共享配置的唯一同步器。显式安装 runtime 后，先预览漂移，再只应用受影响 scope：</p>
+<pre><code class="language-bash"># 1. 安装 multi-agent-sync runtime
+python3 scripts/install.py \
+  --target &quot;$TARGET&quot; \
+  --profile codex \
+  --components multi-agent-sync \
+  --apply --yes
 
-<h3>7.7 多 Agent 同步</h3>
-<pre><span class="tok-comment"># 1. 安装 runtime</span>
-<span class="tok-keyword">python3</span> scripts/install.py <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--profile</span> codex \
-  <span class="tok-flag">--components</span> multi-agent-sync <span class="tok-flag">--apply</span> <span class="tok-flag">--yes</span>
+# 2. 预览同步漂移
+python3 &quot;$TARGET/.agent-sync/sync_agents.py&quot; --root &quot;$TARGET&quot; --check --scope skills
 
-<span class="tok-comment"># 2. 预览漂移</span>
-<span class="tok-keyword">python3</span> <span class="tok-string">"$TARGET/.agent-sync/sync_agents.py"</span> <span class="tok-flag">--root</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--check</span> <span class="tok-flag">--scope</span> skills
+# 3. 应用同步
+python3 &quot;$TARGET/.agent-sync/sync_agents.py&quot; --root &quot;$TARGET&quot; --apply --scope skills
 
-<span class="tok-comment"># 3. 应用同步</span>
-<span class="tok-keyword">python3</span> <span class="tok-string">"$TARGET/.agent-sync/sync_agents.py"</span> <span class="tok-flag">--root</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--apply</span> <span class="tok-flag">--scope</span> skills
-
-<span class="tok-comment"># 4. 生成本机 hook 配置</span>
-<span class="tok-keyword">cd</span> <span class="tok-string">"$TARGET"</span>
-<span class="tok-keyword">python3</span> .agent-sync/scripts/bootstrap.py <span class="tok-flag">--apply</span>
-<span class="tok-keyword">python3</span> .agent-sync/scripts/bootstrap.py <span class="tok-flag">--check</span>
-
-<span class="tok-comment"># 5. 跨平台验证</span>
-<span class="tok-keyword">python3</span> skills/multi-agent-sync/scripts/validate_portability.py \
-  <span class="tok-flag">--root</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--platform</span> macos</pre>
+# 4. 生成本机 hook 配置（hooks.json / settings.json）
+cd &quot;$TARGET&quot;
+python3 .agent-sync/scripts/bootstrap.py --apply
+python3 .agent-sync/scripts/bootstrap.py --check</code></pre>
 <p><strong>支持 6 种同步范围：</strong> <code>skills</code>、<code>rules</code>、<code>hooks</code>、<code>scripts</code>、<code>workflows</code>、<code>mcp</code></p>
-<p><code>bootstrap.py</code> 根据当前主机 Python 解释器生成 <code>hooks.json</code> / <code>settings.json</code>（gitignored，每台主机不同）。新机器克隆后需重新执行 <code>bootstrap.py --apply</code>。</p>
+<p><strong>bootstrap.py 说明：</strong></p>
+<ul><li>根据当前主机的 Python 解释器路径生成各 Agent 的 <code>hooks.json</code> 或 <code>settings.json</code></li><li>这些文件已在 <code>.gitignore</code> 中，不会提交到版本控制</li><li>在另一台机器克隆后需重新执行 <code>bootstrap.py --apply</code></li><li>bootstrap 只替换受管的 Python hook 命令，保留无关设置</li></ul>
+<p><strong>跨平台验证：</strong></p>
+<pre><code class="language-bash"># 验证交付目标操作系统的可移植性
+python3 skills/multi-agent-sync/scripts/validate_portability.py --root &quot;$TARGET&quot; --platform macos
+python3 skills/multi-agent-sync/scripts/validate_portability.py --root &quot;$TARGET&quot; --platform windows
+python3 skills/multi-agent-sync/scripts/validate_portability.py --root &quot;$TARGET&quot; --platform linux</code></pre>
+<blockquote><p><strong>Windows PowerShell 等价命令</strong>：将 <code>python3</code> 替换为 <code>py -3</code>，路径使用 Windows 格式。</p></blockquote>
+<h3 id="7-8-manifest-platform">7.8 Manifest Platform</h3>
+<p>为 workflow、skill、hook 和 subagent 建立可验证的注册表与权限合同：</p>
+<pre><code class="language-bash"># 1. 安装 manifest-platform
+python3 scripts/install.py \
+  --target &quot;$TARGET&quot; \
+  --profile codex \
+  --components manifest-platform \
+  --apply --yes
 
-<h3>7.8 Manifest Platform</h3>
-<pre><span class="tok-comment"># 安装 + 验证</span>
-<span class="tok-keyword">python3</span> scripts/install.py <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--profile</span> codex \
-  <span class="tok-flag">--components</span> manifest-platform <span class="tok-flag">--apply</span> <span class="tok-flag">--yes</span>
-<span class="tok-keyword">python3</span> <span class="tok-string">"$TARGET/.codex/platform/manifest-registry.py"</span> <span class="tok-flag">--root</span> <span class="tok-string">"$TARGET"</span> validate</pre>
-</section>
+# 2. 验证 registry
+python3 &quot;$TARGET/.codex/platform/manifest-registry.py&quot; --root &quot;$TARGET&quot; validate
 
-<!-- 8. 自定义 Agent 接入 -->
-<section id="sec-8">
-<h2>8. 自定义 Agent 接入</h2>
-<h3>方式一：创建 YAML Profile（推荐）</h3>
-<pre><span class="tok-keyword">name:</span> myagent
-<span class="tok-keyword">agent_dir:</span> .my-agent
-<span class="tok-keyword">skills_dir:</span> .my-agent/skills
-<span class="tok-keyword">rules_dir:</span> .my-agent/rules
-<span class="tok-keyword">scripts_dir:</span> .my-agent/scripts
-<span class="tok-keyword">hooks_dir:</span> .my-agent/hooks
-<span class="tok-keyword">entry_file:</span> INSTRUCTIONS.md
-<span class="tok-keyword">env_template:</span> codex</pre>
-<pre><span class="tok-keyword">python3</span> templates/self-learning/install.py <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--profile-file</span> /path/to/myagent.yaml
-<span class="tok-keyword">python3</span> templates/env/install.py <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--profile-file</span> /path/to/myagent.yaml</pre>
-<h3>方式二：使用命令行参数</h3>
-<pre><span class="tok-keyword">python3</span> templates/self-learning/install.py \
-  <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span> <span class="tok-flag">--custom-agent</span> myagent:.my-agent/skills:.my-agent/hooks</pre>
-</section>
+# 3. 创建初始 manifest（可选）
+python3 &quot;$TARGET/.codex/platform/manifest-registry.py&quot; --root &quot;$TARGET&quot; init</code></pre>
+<p>如 registry 或 skill 已被项目定制，先检查差异；确认可替换后才补充 <code>--force-manifest-platform</code>。</p>
+<p><strong>Manifest 工作流程：</strong></p>
+<ol><li>安装 registry，检查现有配置</li><li>审阅 <code>&lt;agent-dir&gt;/platform/registry.yaml</code>，调整发现路径或 hook 注册文件</li><li>为每个资产添加 <code>manifest.yaml</code>，声明能力与权限</li><li>声明最窄的真实权限（manifest 请求权限，由 host 运行时强制执行）</li><li>添加依赖 ID 仅在被引用的 manifest 存在之后</li><li>运行 <code>validate</code> 解决所有失败项</li></ol>
+<hr>
+<h2 id="8-自定义-agent-接入">8. 自定义 Agent 接入</h2>
+<p>如果你的 AI 编程助手不在内置列表中，可以通过以下方式接入：</p>
+<h3 id="方式一-创建-yaml-profile-推荐">方式一：创建 YAML Profile（推荐）</h3>
+<p>创建一个与 <code>profiles/*.yaml</code> 字段一致的 scalar YAML 文件：</p>
+<pre><code class="language-yaml">name: myagent
+description: &quot;Custom profile for MyAgent projects.&quot;
+agent_dir: .my-agent
+skills_dir: .my-agent/skills
+rules_dir: .my-agent/rules
+scripts_dir: .my-agent/scripts
+hooks_dir: .my-agent/hooks
+entry_file: INSTRUCTIONS.md
+hook_config: &quot;&quot;
+hook_template: &quot;&quot;
+include_openai_yaml: false
+env_template: codex
+skill_registry: .my-agent/rules/common/skill-invocation.md
+prompt_cache_rule: .my-agent/rules/common/prompt-cache.md</code></pre>
+<p>然后用 <code>--profile-file</code> 安装：</p>
+<pre><code class="language-bash">python3 templates/self-learning/install.py --target &quot;$TARGET&quot; --profile-file /path/to/myagent.yaml
+python3 templates/env/install.py --target &quot;$TARGET&quot; --profile-file /path/to/myagent.yaml</code></pre>
+<h3 id="方式二-使用命令行参数">方式二：使用命令行参数</h3>
+<pre><code class="language-bash"># 自学习
+python3 templates/self-learning/install.py \
+  --target &quot;$TARGET&quot; --custom-agent myagent:.my-agent/skills:.my-agent/hooks
 
-<!-- 9. 更新已安装的模板 -->
-<section id="sec-9">
-<h2>9. 更新已安装的模板</h2>
-<p>通过统一安装器完成的安装会在目标项目保存 <code>.agent-template-kits/install-state.json</code>，记录已选 profile、组件和受管文件的指纹。</p>
+# 环境变量
+python3 templates/env/install.py \
+  --target &quot;$TARGET&quot; --custom-agent myagent:.my-agent:INSTRUCTIONS.md
 
-<h3>9.1 选择可信版本</h3>
-<pre><span class="tok-keyword">git</span> fetch --tags origin
-<span class="tok-keyword">git</span> switch --detach v1.2.3   <span class="tok-comment"># 替换为你要发布的版本标签</span></pre>
+# 提示缓存
+bash skills/prompt-cache-optimizer/scripts/prompt-cache-bootstrap.sh \
+  --apply --platform none \
+  --agent myagent,.my-agent,INSTRUCTIONS.md \
+  --with-skill --target &quot;$TARGET&quot;
 
-<h3>9.2 预览更新</h3>
-<pre><span class="tok-keyword">python3</span> scripts/install.py update <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span></pre>
+# Workflow
+bash skills/workflow-todo-state/scripts/install.sh \
+  &quot;$TARGET&quot; \
+  --agent-dir .my-agent \
+  --skills-dir .my-agent/skills \
+  --entry-file INSTRUCTIONS.md \
+  --with-skill --init-layout --update-agents
 
-<h3>9.3 处理冲突</h3>
-<p>如果输出 <code>[CONFLICT] path</code>，需逐项确认：</p>
-<pre><span class="tok-keyword">python3</span> scripts/install.py update \
-  <span class="tok-flag">--target</span> <span class="tok-string">"$TARGET"</span> \
-  <span class="tok-flag">--accept</span> .agent/rules/common/env.md \
-  <span class="tok-flag">--accept</span> .agent/skills/prompt-cache-optimizer/SKILL.md \
-  <span class="tok-flag">--apply</span> <span class="tok-flag">--yes</span></pre>
+# 技能注册表
+python3 skills/sync-skill-registry/scripts/sync_skill_registry.py \
+  --root &quot;$TARGET&quot; \
+  --skills-dir .my-agent/skills \
+  --registry-file .my-agent/rules/common/skill-invocation.md \
+  --create --with-skill --dry-run</code></pre>
+<p>确认预览无误后，去掉 <code>--dry-run</code> 执行。</p>
+<hr>
+<h2 id="9-更新已安装的模板">9. 更新已安装的模板</h2>
+<p>通过统一安装器完成的安装会在目标项目保存 <code>.agent-template-kits/install-state.json</code>，记录已选 profile、组件和受管文件的指纹。这让更新器能区分模板变更与项目自己的定制内容。</p>
+<h3 id="9-1-选择可信版本">9.1 选择可信版本</h3>
+<p>先在<strong>模板仓库</strong>中选择要发布给用户的可信版本；这一步只更新模板源，不会修改目标项目的 Git：</p>
+<pre><code class="language-bash">git fetch --tags origin
+git switch --detach v1.2.3   # 替换为你准备发布的版本标签</code></pre>
+<h3 id="9-2-预览更新">9.2 预览更新</h3>
+<p>更新器会把目标项目复制到临时目录，在副本上用原先的 profile 和组件生成候选结果；默认不会写入目标项目：</p>
+<pre><code class="language-bash">python3 scripts/install.py update --target &quot;$TARGET&quot;</code></pre>
+<h3 id="9-3-处理冲突">9.3 处理冲突</h3>
+<p>如果输出 <code>[CONFLICT] path</code>，表示该受管文件被项目修改、删除，或新模板将覆盖一个未受管的现有文件。更新会停止，直到你逐项确认：</p>
+<pre><code class="language-bash">python3 scripts/install.py update \
+  --target &quot;$TARGET&quot; \
+  --accept .agent/rules/common/env.md \
+  --accept .agent/skills/prompt-cache-optimizer/SKILL.md \
+  --apply --yes</code></pre>
 <blockquote><p>不要用通配符批量接受。每个冲突路径必须显式写为一个 <code>--accept</code>。</p></blockquote>
-
-<h3>9.4 更新器安全行为</h3>
-<ul>
-  <li>应用前自动备份到 <code>.agent-template-kits/backups/&lt;UTC 时间戳&gt;/</code></li>
-  <li>不执行 <code>git pull</code>、<code>fetch</code>，不修改目标项目 Git 元数据</li>
-  <li>拒绝包含符号链接的目标目录</li>
-  <li>后续补装时，更新器维护已安装的全部选择</li>
-</ul>
-
-<h3>9.5 首次迁移旧项目</h3>
-<p>没有状态文件的旧项目需先使用 <code>scripts/install.py --apply</code> 重新安装所需组件，之后才能用安全更新命令。</p>
-</section>
-
-<!-- 10. 安全与幂等性保障 -->
-<section id="sec-10">
-<h2>10. 安全与幂等性保障</h2>
-<table>
-  <tr><th>保障项</th><th>说明</th></tr>
-  <tr><td><strong>默认 dry-run</strong></td><td>首次操作优先使用 <code>--dry-run</code> 或 <code>--check</code></td></tr>
-  <tr><td><strong>不覆盖学习记录</strong></td><td><code>--overwrite</code> 不覆盖 <code>.learnings/</code></td></tr>
-  <tr><td><strong>保留无关 hooks</strong></td><td>self-learning 的 <code>--overwrite</code> 不删除无关 hook 配置</td></tr>
-  <tr><td><strong>入口文件安全</strong></td><td>env 的 <code>--overwrite</code> 只更新标记区块</td></tr>
-  <tr><td><strong>Workflow 可重复</strong></td><td>安装器可重复执行；内容不同时需显式 <code>--force</code></td></tr>
-  <tr><td><strong>注册表精确管理</strong></td><td>只删除上次同步标记为受管但已不存在的 skill</td></tr>
-  <tr><td><strong>密钥不泄露</strong></td><td>审计报告只含文件、行号和规则名</td></tr>
-  <tr><td><strong>显式覆盖</strong></td><td><code>--overwrite</code>、<code>--force-workflow</code> 和 <code>--force-manifest-platform</code> 必须明确指定</td></tr>
-  <tr><td><strong>更新前备份</strong></td><td>更新器把将改动的文件备份到 <code>.agent-template-kits/backups/</code></td></tr>
-  <tr><td><strong>冲突逐项确认</strong></td><td>每个冲突路径需显式 <code>--accept</code></td></tr>
-  <tr><td><strong>符号链接保护</strong></td><td>安全更新拒绝包含符号链接的目标目录</td></tr>
-  <tr><td><strong>路径安全</strong></td><td>多 Agent 同步要求路径为非空、项目相对的 POSIX 路径</td></tr>
-  <tr><td><strong>MCP 凭证安全</strong></td><td><code>mcp-servers.json</code> 中使用环境变量引用</td></tr>
-</table>
-</section>
-
-<!-- 11. 验证与质量检查 -->
-<section id="sec-11">
-<h2>11. 验证与质量检查</h2>
-<h3>模板仓库自检</h3>
-<pre><span class="tok-comment"># 综合验证</span>
+<h3 id="9-4-应用更新">9.4 应用更新</h3>
+<p>确认无误后执行：</p>
+<pre><code class="language-bash">python3 scripts/install.py update \
+  --target &quot;$TARGET&quot; \
+  --apply --yes</code></pre>
+<p><strong>更新器的安全行为：</strong></p>
+<ul><li>应用前，把所有将改动的现有文件备份到 <code>.agent-template-kits/backups/&lt;UTC 时间戳&gt;/</code></li><li>执行安装并核对结果是否与预览一致</li><li>不执行 <code>git pull</code>、<code>fetch</code>，不修改目标项目的 Git 元数据</li><li>拒绝包含符号链接的目标目录，防止写入越过边界</li><li>后续补装 profile 或组件时，更新器会维护已安装的全部选择</li></ul>
+<h3 id="9-5-首次迁移旧项目">9.5 首次迁移旧项目</h3>
+<p>首次使用过旧的单独安装命令的项目没有状态文件。请先使用一次 <code>scripts/install.py --apply</code> 重新安装所需组件，之后才能用安全更新命令。</p>
+<h3 id="9-6-提示缓存升级">9.6 提示缓存升级</h3>
+<p>直接调用提示缓存安装器时仍默认保留已有规则、观测资产和 skill。只有明确给出 <code>--apply --overwrite</code> 才会替换它们。</p>
+<hr>
+<h2 id="10-安全与幂等性保障">10. 安全与幂等性保障</h2>
+<table><thead><tr><th>保障项</th><th>说明</th></tr></thead><tbody>
+<tr><td><strong>默认 dry-run</strong></td><td>首次操作优先使用 <code>--dry-run</code> 或 <code>--check</code></td></tr>
+<tr><td><strong>不覆盖学习记录</strong></td><td><code>--overwrite</code> 不覆盖 <code>.learnings/</code></td></tr>
+<tr><td><strong>保留无关 hooks</strong></td><td>self-learning 的 <code>--overwrite</code> 不删除无关 hook 配置</td></tr>
+<tr><td><strong>入口文件安全</strong></td><td>env 的 <code>--overwrite</code> 只更新标记区块，不影响其他内容</td></tr>
+<tr><td><strong>Workflow 可重复</strong></td><td>安装器可重复执行；内容不同时需显式 <code>--force</code></td></tr>
+<tr><td><strong>注册表精确管理</strong></td><td>只删除上次同步标记为受管但已不存在的 skill</td></tr>
+<tr><td><strong>密钥不泄露</strong></td><td>审计报告只含文件、行号和规则名，不输出凭证原文</td></tr>
+<tr><td><strong>显式覆盖</strong></td><td><code>--overwrite</code>、<code>--force-workflow</code> 和 <code>--force-manifest-platform</code> 必须由用户明确指定</td></tr>
+<tr><td><strong>更新前备份</strong></td><td>更新器把将改动的现有文件备份到 <code>.agent-template-kits/backups/&lt;时间戳&gt;/</code></td></tr>
+<tr><td><strong>冲突逐项确认</strong></td><td>更新器检测到冲突时停止，每个冲突路径需显式 <code>--accept</code></td></tr>
+<tr><td><strong>符号链接保护</strong></td><td>安全更新拒绝包含符号链接的目标目录</td></tr>
+<tr><td><strong>路径安全</strong></td><td>多 Agent 同步要求所有路径为非空、项目相对的 POSIX 路径</td></tr>
+<tr><td><strong>MCP 凭证安全</strong></td><td><code>mcp-servers.json</code> 中使用环境变量引用，不直接存放凭证</td></tr>
+</tbody></table>
+<hr>
+<h2 id="11-验证与质量检查">11. 验证与质量检查</h2>
+<h3 id="模板仓库自检">模板仓库自检</h3>
+<pre><code class="language-bash"># 综合验证：语法检查 + 临时目录安装 smoke test + 回归测试
 scripts/validate.sh
-.codex/scripts/check-env-template.sh <span class="tok-flag">--strict</span>
-.codex/scripts/sync-workflow-routing.sh <span class="tok-flag">--check</span>
-skills/security-secret-audit/scripts/audit-secrets.sh
-<span class="tok-keyword">git</span> diff <span class="tok-flag">--check</span></pre>
+
+# 环境变量模板检查
+.codex/scripts/check-env-template.sh --strict
+
+# Workflow 路由注册表检查
+.codex/scripts/sync-workflow-routing.sh --check
+
+# 项目风险与凭证严格审计
+skills/security-secret-audit/scripts/audit-secrets.sh --project --strict
+
+# 空白错误检查
+git diff --check</code></pre>
 <blockquote><p>GitHub Actions 会对 push 到 <code>main</code> 和 pull request 执行同类检查（覆盖 Ubuntu、macOS、Windows 三平台）。</p></blockquote>
+<h3 id="辅助验证脚本">辅助验证脚本</h3>
+<pre><code class="language-bash"># 验证 profile YAML 合同完整性
+python3 scripts/validate-profiles.py
 
-<h3>辅助验证脚本</h3>
-<pre><span class="tok-comment"># 验证 profile YAML 合同完整性</span>
-<span class="tok-keyword">python3</span> scripts/validate-profiles.py
+# 验证文档覆盖所有组件
+python3 scripts/check-docs.py
 
-<span class="tok-comment"># 验证文档覆盖所有组件</span>
-<span class="tok-keyword">python3</span> scripts/check-docs.py
+# 验证 canonical packages、外部来源 commit/license/hash 与 profile 合同
+python3 scripts/sync-runtime-skills.py --validate
 
-<span class="tok-comment"># 同步 skills/ 到 .agents/skills/</span>
-<span class="tok-keyword">python3</span> scripts/sync-runtime-skills.py
-<span class="tok-keyword">python3</span> scripts/sync-runtime-skills.py <span class="tok-flag">--check</span></pre>
-</section>
+# 生成或检查本机 runtime adapters（不提交到 Git）
+python3 scripts/sync-runtime-skills.py --apply
+python3 scripts/sync-runtime-skills.py --check</code></pre>
+<h3 id="目标项目验证">目标项目验证</h3>
+<pre><code class="language-bash">cd &quot;$TARGET&quot;
 
-<!-- 12. 常见问题 -->
-<section id="sec-12">
-<h2>12. 常见问题</h2>
+# 验证 env 安装（如有 .env.example）
+.codex/scripts/check-env-template.sh --strict
 
-<div class="faq-item">
-  <div class="faq-q" onclick="toggleFaq(this)">安装器会修改我的项目代码吗？<span class="arrow">▶</span></div>
-  <div class="faq-a"><div class="faq-a-inner">不会。安装器只写入 agent 配置目录（如 <code>.codex/</code>、<code>.claude/</code>）、skills 目录、学习记录目录和入口规则文件的标记区块。不会改动业务代码。建议安装后先检查 <code>git diff</code> 再提交。</div></div>
-</div>
-
-<div class="faq-item">
-  <div class="faq-q" onclick="toggleFaq(this)">我的项目已经有 hook 配置，安装会覆盖吗？<span class="arrow">▶</span></div>
-  <div class="faq-a"><div class="faq-a-inner">不会。self-learning 的安装器会合并 hook 配置，保留既有的无关设置。<code>--overwrite</code> 也只更新受管的 skill 和 hook 脚本。多 Agent 同步的 <code>bootstrap.py</code> 也只替换受管的 Python hook 命令。</div></div>
-</div>
-
-<div class="faq-item">
-  <div class="faq-q" onclick="toggleFaq(this)">Windows 上可以使用吗？<span class="arrow">▶</span></div>
-  <div class="faq-a"><div class="faq-a-inner">可以。Python 脚本可直接在 Windows 上运行（使用 <code>py -3</code> 或 <code>python</code>）。Bash 脚本需要 Git Bash 或 WSL。统一安装器会自动查找系统 Bash 和常见 Git for Windows 路径；找不到时会明确提示，不会写入目标项目。生成的 hooks 在 Windows 上使用 <code>python.exe</code>。</div></div>
-</div>
-
-<div class="faq-item">
-  <div class="faq-q" onclick="toggleFaq(this)">提示缓存的可观测性什么时候用？<span class="arrow">▶</span></div>
-  <div class="faq-a"><div class="faq-a-inner">仅当你的 Agent 已接通能自动记录 provider usage 的 API 调用后使用 <code>--with-observability</code>。直接使用 Codex 而没有项目 API 的场景，不要加此选项，也无需手填 token 或费用。</div></div>
-</div>
-
-<div class="faq-item">
-  <div class="faq-q" onclick="toggleFaq(this)">密钥审计能检测哪些类型的凭证？<span class="arrow">▶</span></div>
-  <div class="faq-a"><div class="faq-a-inner">支持检测：API Key、Token、密码、私钥、JWT 等。高置信度模式扫描所有文本文件；低置信度变量名检查限制在配置类文件中。报告绝不输出凭证原文。</div></div>
-</div>
-
-<div class="faq-item">
-  <div class="faq-q" onclick="toggleFaq(this)">安装后如何卸载？<span class="arrow">▶</span></div>
-  <div class="faq-a"><div class="faq-a-inner">本产品没有专门的卸载器。删除安装时创建的目录和文件即可（如 <code>.codex/skills/</code>、<code>.learnings/</code> 等）。建议在安装前用 <code>--dry-run</code> 预览所有变更。</div></div>
-</div>
-
-<div class="faq-item">
-  <div class="faq-q" onclick="toggleFaq(this)">更新模板时我的定制内容会被覆盖吗？<span class="arrow">▶</span></div>
-  <div class="faq-a"><div class="faq-a-inner">不会。更新器通过 <code>install-state.json</code> 中的文件指纹区分模板变更与项目定制。检测到受管文件被修改时标记为 <code>[CONFLICT]</code> 并停止，需逐个 <code>--accept</code> 确认。应用前还会自动备份到 <code>.agent-template-kits/backups/</code>。</div></div>
-</div>
-
-<div class="faq-item">
-  <div class="faq-q" onclick="toggleFaq(this)">多 Agent 同步的 bootstrap.py 生成的文件需要提交吗？<span class="arrow">▶</span></div>
-  <div class="faq-a"><div class="faq-a-inner">不需要。<code>hooks.json</code>、<code>settings.json</code> 等本机配置文件已在 <code>.gitignore</code> 中。它们包含当前主机的 Python 解释器路径，每台机器不同。在新机器克隆后需重新执行 <code>bootstrap.py --apply</code>。</div></div>
-</div>
-
-</section>
-
-<!-- 13. 目录结构参考 -->
-<section id="sec-13">
-<h2>13. 目录结构参考</h2>
-<h3>安装后的目标项目（以 Codex 为例）</h3>
-<div class="tree-block"><pre>target-project/
+# 验证 workflow 路由注册表
+.codex/scripts/sync-workflow-routing.sh --check</code></pre>
+<blockquote><p>Claude Code 对应路径为 <code>.claude/scripts/</code>，generic profile 对应路径为 <code>.agent/scripts/</code>。</p></blockquote>
+<hr>
+<h2 id="12-常见问题">12. 常见问题</h2>
+<h3 id="q-安装器会修改我的项目代码吗">Q: 安装器会修改我的项目代码吗？</h3>
+<p>不会。安装器只写入 agent 配置目录（如 <code>.codex/</code>、<code>.claude/</code>）、skills 目录、学习记录目录和入口规则文件的标记区块。不会改动业务代码。建议安装后先检查 <code>git diff</code> 再提交。</p>
+<h3 id="q-我的项目已经有-hook-配置-安装会覆盖吗">Q: 我的项目已经有 hook 配置，安装会覆盖吗？</h3>
+<p>不会。self-learning 的安装器会合并 hook 配置，保留既有的无关设置。<code>--overwrite</code> 也只更新受管的 skill 和 hook 脚本。多 Agent 同步的 <code>bootstrap.py</code> 也只替换受管的 Python hook 命令。</p>
+<h3 id="q-windows-上可以使用吗">Q: Windows 上可以使用吗？</h3>
+<p>可以。Python 脚本可直接在 Windows 上运行（使用 <code>py -3</code> 或 <code>python</code>）。Bash 脚本需要 Git Bash 或 WSL。统一安装器会自动查找系统 Bash 和常见 Git for Windows 路径；找不到时会明确提示，不会写入目标项目。生成的 hooks 在 Windows 上使用 <code>python.exe</code>。</p>
+<h3 id="q-提示缓存的可观测性-with-observability-什么时候用">Q: 提示缓存的可观测性（<code>--with-observability</code>）什么时候用？</h3>
+<p>仅当你的 Agent 已接通能自动记录 provider usage 的 API 调用后使用。直接使用 Codex 而没有项目 API 的场景，不要加此选项，也无需手填 token 或费用。</p>
+<h3 id="q-密钥审计能检测哪些类型的凭证">Q: 密钥审计能检测哪些类型的凭证？</h3>
+<p>支持检测：Provider 特定格式的 API Key、Token、密码、私钥、JWT 等。高置信度模式扫描所有文本文件；低置信度变量名检查限制在配置类文件中，避免生成代码噪声。报告绝不输出凭证原文。</p>
+<h3 id="q-安装后如何卸载">Q: 安装后如何卸载？</h3>
+<p>本产品没有专门的卸载器。删除安装时创建的目录和文件即可（如 <code>.codex/skills/</code>、<code>.learnings/</code> 等）。建议在安装前用 <code>--dry-run</code> 预览所有变更，记录将创建的文件列表。</p>
+<h3 id="q-更新模板时我的定制内容会被覆盖吗">Q: 更新模板时我的定制内容会被覆盖吗？</h3>
+<p>不会。更新器通过 <code>install-state.json</code> 中的文件指纹区分模板变更与项目定制。如果检测到受管文件被项目修改，会标记为 <code>[CONFLICT]</code> 并停止，需要你逐个用 <code>--accept</code> 确认。应用前还会自动备份到 <code>.agent-template-kits/backups/</code>。</p>
+<h3 id="q-多-agent-同步的-bootstrap-py-生成的文件需要提交吗">Q: 多 Agent 同步的 bootstrap.py 生成的文件需要提交吗？</h3>
+<p>不需要。runtime skills、<code>hooks.json</code>、<code>settings.json</code> 和 <code>.agent-sync/</code> 都是本机生成内容，已在 <code>.gitignore</code> 中。在新机器克隆后先执行 <code>scripts/sync-runtime-skills.py --apply</code>，需要跨 Agent hooks 时再安装并运行 <code>.agent-sync/bootstrap.py --apply</code>。</p>
+<hr>
+<h2 id="13-目录结构参考">13. 目录结构参考</h2>
+<h3 id="安装后的目标项目-以-codex-为例">安装后的目标项目（以 Codex 为例）</h3>
+<pre><code class="language-text">target-project/
 ├── .agents/skills/
 │   ├── digest/
 │   ├── maintain-learnings/
@@ -664,67 +475,58 @@ skills/security-secret-audit/scripts/audit-secrets.sh
 │   └── workflows/
 ├── .learnings/
 ├── workspace/workflow-runs/
-├── .codex/hooks.json          <span style="color:var(--text-dim)"># 由 bootstrap.py 生成（gitignored）</span>
-└── AGENTS.md</pre></div>
-<blockquote><p>安装了 <code>multi-agent-sync</code> 的项目会额外出现 <code>.agent-sync/</code> 目录；安装了 <code>manifest-platform</code> 的项目会额外出现 <code>.codex/platform/</code> 目录。仅在项目已接通自动 LLM usage 采集时，才会额外出现 <code>/.llm/prompt-cache/</code>。</p></blockquote>
-
-<h3>本模板仓库的目录职责</h3>
-<div class="tree-block"><pre>profiles/       内置 Agent 布局合同（12 种内置 Profile）
+├── .codex/hooks.json          # 由 bootstrap.py 生成（gitignored，每台主机不同）
+└── AGENTS.md</code></pre>
+<blockquote><p><code>.codex/hooks.json</code> 是受忽略的主机本地文件，由多 Agent 同步 runtime 的 <code>bootstrap.py</code> 自动生成。在克隆仓库后需先安装 <code>.agent-sync</code> 并执行 <code>bootstrap.py --apply</code> 生成该文件。</p></blockquote>
+<blockquote><p>仅在项目已接通自动 LLM usage 采集时，才会额外出现 <code>/.llm/prompt-cache/</code>。</p></blockquote>
+<blockquote><p>安装了 <code>multi-agent-sync</code> 的项目会额外出现 <code>.agent-sync/</code> 目录；安装了 <code>manifest-platform</code> 的项目会额外出现 <code>.codex/platform/</code> 目录。</p></blockquote>
+<h3 id="本模板仓库的目录职责">本模板仓库的目录职责</h3>
+<pre><code class="language-text">profiles/       内置 Agent 布局合同（12 种内置 Profile）
 templates/      可安装的规则、hook 和初始文件
-skills/         可独立分发的 skill 包和工具（8 个功能模块）
-.agents/        本仓库自身使用的 Codex skills（由 sync-runtime-skills.py 同步）
+skills/         公共 canonical skill packages；必须是可复制的真实目录
+.agents/        本机 Codex runtime adapter（gitignored，由 bootstrap 生成）
+.claude/        Claude Code 配置；skills runtime adapter 由 bootstrap 生成
 .codex/         本仓库自身使用的 rules、hooks 和 workflows
-.agent-sync/    多 Agent 同步 runtime
-scripts/        仓库级验证命令（validate.sh、install.py 等）
+.agent-sync/    可选多 Agent 同步 runtime（gitignored）
+.agent-runtime/ runtime skill 状态与外部 source cache（gitignored）
+scripts/        仓库级验证命令（validate.sh、install.py、sync-runtime-skills.py 等）
 tests/          安装、升级和状态转移回归测试
-docs/           便携性说明 + 设计方案 + 完整功能文档</pre></div>
-</section>
-
-<!-- 14. 发布流程 -->
-<section id="sec-14">
-<h2>14. 发布流程</h2>
-<p>本仓库使用语义化版本和 Git 标签发布。版本标签格式为 <code>vX.Y.Z</code>：</p>
-<ul>
-  <li><strong>主版本</strong>（X）：破坏兼容性时递增</li>
-  <li><strong>次版本</strong>（Y）：新增兼容能力时递增</li>
-  <li><strong>修订版本</strong>（Z）：修复或文档修正时递增</li>
-</ul>
-<h3>发布前</h3>
-<pre><span class="tok-keyword">bash</span> scripts/validate.sh
-<span class="tok-keyword">bash</span> skills/security-secret-audit/scripts/audit-secrets.sh</pre>
-<h3>发布</h3>
-<pre><span class="tok-keyword">git</span> tag -a vX.Y.Z -m <span class="tok-string">"Release vX.Y.Z"</span>
-<span class="tok-keyword">git</span> push origin main --follow-tags</pre>
-</section>
-
+docs/           便携性说明 + 设计方案（superpowers/）+ 完整功能文档</code></pre>
 <hr>
-<p style="color: var(--text-dim); font-size: 13px; text-align: center;">本文档基于 Agent Template Kits 仓库当前版本编写</p>
-
-</main>
+<h2 id="14-发布流程">14. 发布流程</h2>
+<p>本仓库使用语义化版本和 Git 标签发布。版本标签格式为 <code>vX.Y.Z</code>：</p>
+<ul><li><strong>主版本</strong>（X）：破坏兼容性时递增</li><li><strong>次版本</strong>（Y）：新增兼容能力时递增</li><li><strong>修订版本</strong>（Z）：修复或文档修正时递增</li></ul>
+<h3 id="发布前">发布前</h3>
+<ol><li>将本次面向用户的变更写入 <code>CHANGELOG.md</code>，用明确的版本标题和日期替换 <code>Unreleased</code> 下对应内容</li><li>在干净工作树中运行验证：</li></ol>
+<pre><code class="language-bash">scripts/validate.sh
+skills/security-secret-audit/scripts/audit-secrets.sh --project --strict</code></pre>
+<ol><li>确认两个命令均以状态码 <code>0</code> 结束，并检查 <code>git diff --check</code> 没有空白错误</li></ol>
+<h3 id="发布">发布</h3>
+<ol><li>提交版本、变更日志和相关文档</li><li>创建带说明的标签：</li></ol>
+<pre><code class="language-bash">git tag -a v0.1.0 -m &quot;Release v0.1.0&quot;</code></pre>
+<ol><li>推送提交和标签：</li></ol>
+<pre><code class="language-bash">git push origin main --follow-tags</code></pre>
+<ol><li>在托管平台发布对应 Release，并复制该版本的变更说明</li></ol>
+<blockquote><p>不要为历史提交补造版本标签；从下一次经过完整验证的公开发布开始使用此流程。</p></blockquote>
+<hr>
+<h2 id="进一步阅读">进一步阅读</h2>
+<table><thead><tr><th>文档</th><th>说明</th></tr></thead><tbody>
+<tr><td><a href="../README.md">README.md</a></td><td>项目主文档（技术细节）</td></tr>
+<tr><td><a href="../CHANGELOG.md">CHANGELOG.md</a></td><td>更新日志</td></tr>
+<tr><td><a href="PORTABILITY.md">docs/PORTABILITY.md</a></td><td>跨 Agent 与跨平台接入指南</td></tr>
+<tr><td><a href="../RELEASING.md">RELEASING.md</a></td><td>发布流程说明</td></tr>
+<tr><td><a href="../profiles/README.md">profiles/README.md</a></td><td>Agent Profile 字段说明</td></tr>
+<tr><td><a href="../templates/self-learning/README.md">templates/self-learning/README.md</a></td><td>自学习模板详解</td></tr>
+<tr><td><a href="../templates/cache/README.md">templates/cache/README.md</a></td><td>提示缓存模板详解</td></tr>
+<tr><td><a href="../templates/env/README.md">templates/env/README.md</a></td><td>环境变量模板详解</td></tr>
+<tr><td><a href="../skills/workflow-todo-state/SKILL.md">skills/workflow-todo-state/SKILL.md</a></td><td>Workflow Todo State 技能文档</td></tr>
+<tr><td><a href="../skills/sync-skill-registry/SKILL.md">skills/sync-skill-registry/SKILL.md</a></td><td>技能注册表同步文档</td></tr>
+<tr><td><a href="../skills/security-secret-audit/SKILL.md">skills/security-secret-audit/SKILL.md</a></td><td>密钥安全审计文档</td></tr>
+<tr><td><a href="../skills/multi-agent-sync/SKILL.md">skills/multi-agent-sync/SKILL.md</a></td><td>多 Agent 同步文档</td></tr>
+<tr><td><a href="../skills/manifest-platform/SKILL.md">skills/manifest-platform/SKILL.md</a></td><td>Manifest Platform 文档</td></tr>
+</tbody></table>
+<hr>
+<p>*本文档基于 Agent Template Kits 仓库当前版本编写。如有疑问，请参阅上述进一步阅读中的对应文档。*</p><p class="source-note">由 canonical Markdown 文档确定性生成</p></main>
 </div>
-
-<script>
-// Scroll spy
-const sections = document.querySelectorAll('section[id]');
-const navLinks = document.querySelectorAll('.sidebar nav a');
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      const id = entry.target.id;
-      navLinks.forEach(link => {
-        link.classList.toggle('active', link.getAttribute('href') === '#' + id);
-      });
-    }
-  });
-}, { rootMargin: '-20% 0px -60% 0px' });
-sections.forEach(s => observer.observe(s));
-
-// FAQ toggle
-function toggleFaq(el) {
-  el.classList.toggle('open');
-  const answer = el.nextElementSibling;
-  answer.classList.toggle('open');
-}
-</script>
 </body>
 </html>

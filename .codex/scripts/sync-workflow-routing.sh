@@ -25,7 +25,7 @@ warn() {
 }
 
 is_python3() {
-  "$1" -c 'import sys; raise SystemExit(0 if sys.version_info[0] == 3 else 1)' >/dev/null 2>&1
+  "$1" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' >/dev/null 2>&1
 }
 
 find_python() {
@@ -97,7 +97,7 @@ if [ ! -d "$ROOT_DIR" ]; then
 fi
 
 PYTHON_BIN="$(find_python)" || {
-  warn "Python 3 is required (python3 or python)"
+  warn "Python 3.10+ is required (python3 or python)"
   exit 1
 }
 
